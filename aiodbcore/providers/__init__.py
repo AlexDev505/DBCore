@@ -6,6 +6,11 @@ from .base import BaseProvider
 
 
 def get_provider(db_url: str) -> ty.Type[BaseProvider]:
+    """
+    Imports suitable provider class and returns it.
+    :param db_url: path to db.
+    :returns: provider class.
+    """
     if not (
         match := re.fullmatch(
             r"(?P<provider>.+?)(\+(?P<library>.+?))?://(?P<db>.+)", db_url

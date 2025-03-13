@@ -56,6 +56,3 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
     @staticmethod
     def modify_db_path(db_path: str) -> str:
         return db_path.removeprefix("sqlite+aiosqlite://")
-
-    def __del__(self):
-        asyncio.create_task(self.close_connection())

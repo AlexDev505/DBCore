@@ -30,11 +30,11 @@ class MyDB(AsyncDBCore[MyModel]):
 
 async def main():
     MyDB.init(os.environ["DB"])  # init db at start of program
-    async with MyDB() as db:
-        data = await db.my_simple_query()
-        first = data[0]
-        first.foo += 100
-        await db.save(first)
+    db = MyDB()
+    data = await db.my_simple_query()
+    first = data[0]
+    first.foo += 100
+    await db.save(first)
 
 
 if __name__ == '__main__':
