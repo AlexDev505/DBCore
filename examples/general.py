@@ -6,6 +6,7 @@ from models import User, Chat
 
 
 DB_PATH = "sqlite+aiosqlite://:memory:"
+DB_PATH = "postgresql+asyncpg://test_db_kwlq_user:3ZzP0k8cPUo0EYd1Y4Cnt1TTGz1g3iEp@dpg-cv63pufnoe9s73bqmj30-a.ohio-postgres.render.com/test_db_kwlq"
 
 
 class DB(AsyncDBCore[User | Chat]):

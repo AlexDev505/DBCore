@@ -1,6 +1,9 @@
 import asyncio
 import typing as ty
 
+from ...exceptions import UniqueRequiredError
+
+
 try:
     import aiosqlite
 except ModuleNotFoundError as err:
@@ -41,18 +44,23 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
             row = await connection.execute_insert(query, values)
             return row[0]
 
-    async def _fetchone(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
-    ) -> tuple[ty.Any] | None:
+    async def _fetchone(self, query, args=()) -> tuple[ty.Any] | None:
         if rows := await self._fetchall(query, args):
             return rows[0]
 
-    async def _fetchall(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
-    ) -> list[tuple[ty.Any]]:
+    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any]]:
         async with self.ensure_connection() as connection:
             return list(await connection.execute_fetchall(query, args))
 
     @staticmethod
     def modify_db_path(db_path: str) -> str:
         return db_path.removeprefix("sqlite+aiosqlite://")
+
+    def _translate_exception(self, exception, query, args):
+        if isinstance(exception, aiosqlite.IntegrityError):
+            if exception.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE":
+                text = exception.args[0]
+                return UniqueRequiredError(
+                    query, args, exception, field_name=text[text.rfind(": ") + 2 :]
+                )
+        return super()._translate_exception(exception, query, args)

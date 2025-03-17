@@ -2,6 +2,9 @@ import asyncio
 import re
 import typing as ty
 
+from ...exceptions import UniqueRequiredError
+
+
 try:
     import asyncpg
 except ModuleNotFoundError as err:
@@ -45,25 +48,27 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, *args)
 
-    async def _execute_insert_query(
-        self, query: str, values: ty.Sequence[ty.Any]
-    ) -> int:
+    async def _execute_insert_query(self, query, values) -> int:
         async with self.ensure_connection() as connection:
             row = await connection.fetchrow(query, *values)
             return row.get("id")
 
-    async def _fetchone(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
-    ) -> tuple[ty.Any]:
+    async def _fetchone(self, query, args=()) -> tuple[ty.Any]:
         async with self.ensure_connection() as connection:
             return await connection.fetchrow(query, *args)
 
-    async def _fetchall(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
-    ) -> list[tuple[ty.Any]]:
+    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any]]:
         async with self.ensure_connection() as connection:
             return await connection.fetch(query, *args)
 
     @staticmethod
     def modify_db_path(db_path: str) -> str:
         return re.sub(r"\+asyncpg", "", db_path)
+
+    def _translate_exception(self, exception, query, args):
+        if isinstance(exception, asyncpg.UniqueViolationError):
+            if match := re.search(r"Key \((.+?)\)=", getattr(exception, "detail", "")):
+                return UniqueRequiredError(
+                    query, args, exception, field_name=match.group(1)
+                )
+        return super()._translate_exception(exception, query, args)

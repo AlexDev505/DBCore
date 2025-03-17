@@ -8,8 +8,22 @@ from abc import ABC, abstractmethod
 from contextlib import suppress
 from datetime import datetime
 from enum import Enum
+from functools import wraps
 
 import orjson
+
+from aiodbcore.exceptions import DBError
+
+
+def translate_exceptions(func):
+    @wraps(func)
+    async def _wrapper(self: BaseProvider, query, args=()):
+        try:
+            return await func(self, query, args)
+        except Exception as e:
+            raise self._translate_exception(e, query, args)
+
+    return _wrapper
 
 
 class BaseProvider[ConnType](ABC):
@@ -88,7 +102,8 @@ class BaseProvider[ConnType](ABC):
         """
         raise NotImplementedError()
 
-    async def execute(self, query: str, args: ty.Iterable[ty.Any] = ()):
+    @translate_exceptions
+    async def execute(self, query: str, args: ty.Sequence[ty.Any] = ()):
         """
         Executes SQL query.
         :param query: SQL statement.
@@ -99,7 +114,7 @@ class BaseProvider[ConnType](ABC):
         return await self._execute(query, args)
 
     @abstractmethod
-    async def _execute(self, query: str, args: ty.Iterable[ty.Any] = ()):
+    async def _execute(self, query: str, args: ty.Sequence[ty.Any] = ()):
         raise NotImplementedError()
 
     def prepare_create_table_query(
@@ -129,6 +144,7 @@ class BaseProvider[ConnType](ABC):
             ),
         )
 
+    @translate_exceptions
     async def execute_insert_query(self, query: str, args: ty.Sequence[ty.Any]) -> int:
         """
         Executes SQL insert query.
@@ -165,8 +181,9 @@ class BaseProvider[ConnType](ABC):
             offset=f" OFFSET {offset}" if offset else "",
         )
 
+    @translate_exceptions
     async def fetchone(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
+        self, query: str, args: ty.Sequence[ty.Any] = ()
     ) -> tuple[ty.Any] | None:
         """
         Executes SQL select query and return one row.
@@ -179,12 +196,13 @@ class BaseProvider[ConnType](ABC):
 
     @abstractmethod
     async def _fetchone(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
+        self, query: str, args: ty.Sequence[ty.Any] = ()
     ) -> tuple[ty.Any] | None:
         raise NotImplementedError()
 
+    @translate_exceptions
     async def fetchall(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
+        self, query: str, args: ty.Sequence[ty.Any] = ()
     ) -> list[tuple[ty.Any]]:
         """
         Executes SQL select query and return all rows.
@@ -197,7 +215,7 @@ class BaseProvider[ConnType](ABC):
 
     @abstractmethod
     async def _fetchall(
-        self, query: str, args: ty.Iterable[ty.Any] = ()
+        self, query: str, args: ty.Sequence[ty.Any] = ()
     ) -> list[tuple[ty.Any]]:
         raise NotImplementedError()
 
@@ -297,6 +315,11 @@ class BaseProvider[ConnType](ABC):
         Brings the url to the desired format.
         """
         return db_path
+
+    def _translate_exception(
+        self, exception: Exception, query: str, args: ty.Sequence[ty.Any]
+    ) -> DBError:
+        return DBError(query, args, exception)
 
 
 class ConnectionWrapper[ConnType]:
