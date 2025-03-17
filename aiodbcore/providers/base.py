@@ -51,6 +51,9 @@ class BaseProvider[ConnType](ABC):
     DELETE_FROM_QUERY_TEMPLATE = 'DELETE FROM "{table_name}"{where}'
     DROP_TABLE_QUERY_TEMPLATE = 'DROP TABLE "{table_name}"'
 
+    CREATE_TABLE_FIELD_TEMPLATE = "{field_name} {type}{unique}"
+    UNIQUE_FIELD = "UNIQUE"
+
     connections_pool: ty.Any
     connection: ConnType | None
 
@@ -100,11 +103,15 @@ class BaseProvider[ConnType](ABC):
         raise NotImplementedError()
 
     def prepare_create_table_query(
-        self, table_name: str, fields: dict[str, ty.Any]
+        self, table_name: str, fields: dict[str, tuple[ty.Any, bool]]
     ) -> str:
         fields = (
-            f"{field_name} {self._get_sql_type(field_type)}"
-            for field_name, field_type in fields.items()
+            self.CREATE_TABLE_FIELD_TEMPLATE.format(
+                field_name=field_name,
+                type=self._get_sql_type(field_type),
+                unique=f" {self.UNIQUE_FIELD}" if unique else "",
+            )
+            for field_name, (field_type, unique) in fields.items()
             if field_name != "id"
         )
         return self.CREATE_TABLE_QUERY_TEMPLATE.format(

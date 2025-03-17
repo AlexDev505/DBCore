@@ -3,8 +3,8 @@ from __future__ import annotations
 import types as tys
 import typing as ty
 
-from .field_types import ModelField
-from .field_types import ModelSignature, prepare_model
+from .models import ModelField
+from .models import ModelSignature, prepare_model
 from .providers import get_provider
 from .tools import get_changed_attributes
 
@@ -86,8 +86,12 @@ class AsyncDBCore[Models]:
         for model_name, signature in self.signatures.items():
             query = self.provider.prepare_create_table_query(
                 model_name,
-                {field.name: field.python_type for field in signature.fields},
+                {
+                    field.name: (field.python_type, field.unique)
+                    for field in signature.fields
+                },
             )
+            print(query)
             await self.provider.execute(query)
 
     async def insert(self, obj: Models) -> Models:

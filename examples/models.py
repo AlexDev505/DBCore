@@ -1,4 +1,7 @@
+import typing as ty
 from dataclasses import dataclass
+
+from aiodbcore.models import FieldMod
 
 
 @dataclass
@@ -12,4 +15,4 @@ class User:
 @dataclass
 class Chat:
     id: int | None = None
-    title: str = ""
+    title: ty.Annotated[str, FieldMod.UNIQUE] = ""  # Values in db must be unique

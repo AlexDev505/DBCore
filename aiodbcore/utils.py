@@ -1,6 +1,6 @@
 import typing as ty
 
-from .field_types import ModelField
+from .models import ModelField
 from .operators import ContainedCmpOperator
 
 

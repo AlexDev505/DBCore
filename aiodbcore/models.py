@@ -4,6 +4,7 @@ import dataclasses
 import types as tys
 import typing as ty
 from contextlib import suppress
+from enum import Enum
 from functools import wraps
 from inspect import isclass
 
@@ -29,6 +30,7 @@ class Field:
 
     name: str
     python_type: ty.Type
+    unique: bool = False
 
     def compare_type(self, type_: ty.Any) -> bool:
         """
@@ -99,12 +101,17 @@ def prepare_model(model: ty.Type) -> ModelSignature:
         raise TypeError(f"Model `{model.__name__}` is not a dataclass")
     watch_changes(model)
     signature = ModelSignature(model.__name__)
-    for field_name, field_type in ty.get_type_hints(model).items():
+    for field_name, field_type in ty.get_type_hints(model, include_extras=True).items():
+        unique = False
+        if ty.get_origin(field_type) is ty.Annotated:
+            metadata = field_type.__metadata__
+            unique = FieldMod.UNIQUE in metadata
+            field_type = ty.get_args(field_type)[0]
         lt_gt = field_type in {int, float}
         if ty.get_origin(field_type) in {ty.Union, tys.UnionType}:
             field_type = UnionType(*ty.get_args(field_type))
             lt_gt = any(field_type.is_contains_type(x) for x in {int, float})
-        field = Field(field_name, field_type)
+        field = Field(field_name, field_type, unique)
         signature.fields.append(field)
         setattr(
             model,
@@ -216,3 +223,7 @@ class ModelField:
 
     def __repr__(self):
         return f"<ModelField {self.default_value!r}>"
+
+
+class FieldMod(Enum):
+    UNIQUE = "unique"
