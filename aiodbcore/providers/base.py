@@ -294,6 +294,8 @@ class BaseProvider[ConnType](ABC):
 
         obj = self._default_convert_value(obj)
         with suppress(ValueError, TypeError):
+            if python_type is datetime:
+                return datetime.strptime(obj, self.DATETIME_FORMAT)
             if dataclasses.is_dataclass(python_type):
                 if type(obj) is dict:
                     return python_type(**obj)
