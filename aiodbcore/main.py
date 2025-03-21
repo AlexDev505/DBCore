@@ -91,7 +91,6 @@ class AsyncDBCore[Models]:
                     for field in signature.fields
                 },
             )
-            print(query)
             await self.provider.execute(query)
 
     async def insert(self, obj: Models) -> Models:
