@@ -4,6 +4,7 @@ import dataclasses
 import types as tys
 import typing as ty
 from contextlib import suppress
+from datetime import datetime, date, time
 from enum import Enum
 from functools import wraps
 from inspect import isclass
@@ -19,6 +20,9 @@ from .operators import (
     ContainedCmpOperator,
 )
 from .tools import watch_changes
+
+
+LT_GT_SUPPORTED = {int, float, datetime, date, time}
 
 
 @dataclasses.dataclass
@@ -107,10 +111,10 @@ def prepare_model(model: ty.Type) -> ModelSignature:
             metadata = field_type.__metadata__
             unique = FieldMod.UNIQUE in metadata
             field_type = ty.get_args(field_type)[0]
-        lt_gt = field_type in {int, float}
+        lt_gt = field_type in LT_GT_SUPPORTED
         if ty.get_origin(field_type) in {ty.Union, tys.UnionType}:
             field_type = UnionType(*ty.get_args(field_type))
-            lt_gt = any(field_type.is_contains_type(x) for x in {int, float})
+            lt_gt = any(field_type.is_contains_type(x) for x in LT_GT_SUPPORTED)
         field = Field(field_name, field_type, unique)
         signature.fields.append(field)
         setattr(
