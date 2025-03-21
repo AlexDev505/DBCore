@@ -12,7 +12,7 @@ from functools import wraps
 
 import orjson
 
-from aiodbcore.exceptions import DBError
+from ..exceptions import DBError
 
 
 def translate_exceptions(func):
