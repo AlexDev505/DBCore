@@ -292,7 +292,7 @@ class BaseProvider[ConnType](ABC):
         obj = self._default_convert_value(obj)
         with suppress(ValueError, TypeError):
             if python_type in {datetime, date, time}:
-                return datetime.fromisoformat(obj)
+                return python_type.fromisoformat(obj)  # noqa
             if dataclasses.is_dataclass(python_type):
                 if type(obj) is dict:
                     return python_type(**obj)
