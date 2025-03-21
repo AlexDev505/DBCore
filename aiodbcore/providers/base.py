@@ -6,7 +6,7 @@ import string
 import typing as ty
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, date, time
 from enum import Enum
 from functools import wraps
 
@@ -46,9 +46,6 @@ class BaseProvider[ConnType](ABC):
     indexed arguments placeholder.
     ty.Callable[[<arg_index>], <placeholder>]
     """
-
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    """ format for datetime instances in db """
 
     """ SQL queries templates """
     CREATE_TABLE_QUERY_TEMPLATE = (
@@ -264,8 +261,8 @@ class BaseProvider[ConnType](ABC):
             return obj
         elif isinstance(obj, Enum):
             obj = obj.value
-        elif isinstance(obj, datetime):
-            obj = obj.strftime(self.DATETIME_FORMAT)
+        elif isinstance(obj, (datetime, date, time)):
+            obj = obj.isoformat()
         elif hasattr(obj, "to_dump"):
             obj = obj.to_dump()
         elif dataclasses.is_dataclass(obj):
@@ -294,8 +291,8 @@ class BaseProvider[ConnType](ABC):
 
         obj = self._default_convert_value(obj)
         with suppress(ValueError, TypeError):
-            if python_type is datetime:
-                return datetime.strptime(obj, self.DATETIME_FORMAT)
+            if python_type in {datetime, date, time}:
+                return datetime.fromisoformat(obj)
             if dataclasses.is_dataclass(python_type):
                 if type(obj) is dict:
                     return python_type(**obj)
