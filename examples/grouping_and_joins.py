@@ -59,9 +59,10 @@ async def main():
     # gets all slots and groups by `date` field
     # slots: dict[date, list[Slot]]
     slots = utils.group_by(Slot.date, await db.fetchall(Slot))
+    print("all slots grouped by `date`:")
     for d, slots in slots.items():
         print(d, *slots, sep="\n")
-        print()
+    print()
 
     bookings_with_slots = await db.fetchall(
         Booking,
@@ -75,6 +76,17 @@ async def main():
         Slot, join=LeftJoin(Booking, (Booking.slot_id, Slot.id))
     )
     print("All slots:", *slots_with_bookings, sep="\n")
+    print()
+
+    slots_without_bookings = await db.fetchall(
+        Slot,
+        join=LeftJoin(Booking, (Booking.slot_id, Slot.id)),
+        where=utils.is_null(Booking.id),
+    )
+    slots = utils.group_by(Slot.date, slots_without_bookings)
+    print("Slots without bookings grouped by `date`:")
+    for d, slots in slots.items():
+        print(d, *slots, sep="\n")
 
     await db.drop_table(Slot)
     await db.drop_table(Booking)

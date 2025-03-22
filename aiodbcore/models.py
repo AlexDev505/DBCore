@@ -18,6 +18,7 @@ from .operators import (
     GtCmpOperator,
     GeCmpOperator,
     ContainedCmpOperator,
+    IsNullCmpOperator,
 )
 from .tools import watch_changes
 
@@ -85,7 +86,7 @@ class UnionType:
                 return type_(obj)
 
     def is_contains_type(self, type_: ty.Type) -> bool:
-        return type_ in self.types or (self.nullable and type_ is None)
+        return type_ in self.types or (self.nullable and type_ is tys.NoneType)
 
     def __repr__(self):
         return (
@@ -147,6 +148,7 @@ def field_operator(
         "__eq__": ("eq", EqCmpOperator),
         "__ne__": ("eq", NeCmpOperator),
         "contained": ("eq", ContainedCmpOperator),
+        "is_null": ("eq", IsNullCmpOperator),
         "__lt__": ("lt_gt", LtCmpOperator),
         "__le__": ("lt_gt", LeCmpOperator),
         "__gt__": ("lt_gt", GtCmpOperator),
@@ -154,7 +156,7 @@ def field_operator(
     }
 
     @wraps(func)
-    def _wrapper(self: ModelField, other: ty.Any) -> CmpOperator:
+    def _wrapper(self: ModelField, other: ty.Any = None) -> CmpOperator:
         op = naming_map[func.__name__]
         field = self.field
         if not getattr(self, op[0]):
@@ -163,11 +165,11 @@ def field_operator(
             for el in other:
                 if not field.compare_type(type(el)):
                     raise TypeError(f"unable to compare {field} and `{el}`")
-        else:
+        elif op[1] is not IsNullCmpOperator:
             if not field.compare_type(type(other)):
                 raise TypeError(f"unable to compare {field} and `{other}`")
 
-        return op[1](field.name, other)
+        return op[1](f"{field.model_name.lower()}.{field.name}", other)
 
     return _wrapper
 
@@ -221,6 +223,10 @@ class ModelField:
 
     @field_operator
     def contained(self, sequence: list | tuple) -> ContainedCmpOperator:
+        pass
+
+    @field_operator
+    def is_null(self) -> IsNullCmpOperator:
         pass
 
     def __hash__(self):

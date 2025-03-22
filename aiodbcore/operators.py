@@ -89,6 +89,21 @@ class ContainedCmpOperator(CmpOperator):
     __str__ = __repr__
 
 
+class IsNullCmpOperator(CmpOperator):
+    sign = "IS NULL"
+
+    def __init__(self, field_name: str, _: ty.Any):
+        super().__init__(field_name, None)
+
+    def get_values(self) -> ty.Sequence[ty.Any]:
+        return tuple()
+
+    def __repr__(self):
+        return f"{self.field_name} {self.sign}"
+
+    __str__ = __repr__
+
+
 class LogicalOperator(Operator, ABC):
     """
     Base class for logical operators between two contained operators.
