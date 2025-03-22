@@ -10,6 +10,7 @@ from .tools import get_changed_attributes
 
 
 if ty.TYPE_CHECKING:
+    from .joins import Join
     from .operators import Operator
     from .providers import BaseProvider
 
@@ -114,6 +115,7 @@ class AsyncDBCore[Models]:
     def _prepare_select_query(
         self,
         model_name: str,
+        join: Join[Models] | None = None,
         where: Operator | None = None,
         order_by: ModelField | None = None,
         reverse: bool = False,
@@ -122,6 +124,7 @@ class AsyncDBCore[Models]:
     ) -> str:
         return self.provider.prepare_select_query(
             model_name,
+            join=str(join) if join else None,
             where=str(where) if where is not None else None,
             order_by=order_by.field.name if order_by is not None else None,
             reverse=reverse,
@@ -129,11 +132,25 @@ class AsyncDBCore[Models]:
             offset=offset,
         )
 
-    def _convert_data(self, model: ty.Type[Models], data: tuple[ty.Any]) -> Models:
+    def _convert_data(
+        self,
+        model: ty.Type[Models],
+        data: tuple[ty.Any],
+        join: Join[Models] | None = None,
+    ) -> Models | tuple[Models | None, Models | None]:
         """
         Converts raw data from db to model.
         """
         signature = self.signatures[model.__name__]
+        if join:
+            sep = len(signature.fields)
+            return (
+                self._convert_data(model, data[:sep]),
+                self._convert_data(join.model, data[sep:]),
+            )
+        elif set(data) == {None}:
+            return None
+
         if len(data) != len(signature.fields):
             raise ValueError(
                 f"Model {signature.name} have {len(signature.fields)} fields, "
@@ -150,15 +167,17 @@ class AsyncDBCore[Models]:
         self,
         model: ty.Type[Models],
         *,
+        join: Join[Models] | None = None,
         where: Operator | None = None,
         order_by: ty.Annotated[ty.Any, ModelField] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
-    ) -> Models | None:
+    ):
         """
         Fetches one row from db.
         :param model: model to fetch.
+        :param join: join statement.
         :param where: filtering statement.
         :param order_by: field for sorting.
         :param reverse: True - fetching from end of table.
@@ -167,26 +186,28 @@ class AsyncDBCore[Models]:
         :returns: one model or None.
         """
         query = self._prepare_select_query(
-            model.__name__, where, order_by, reverse, limit, offset
+            model.__name__, join, where, order_by, reverse, limit, offset
         )
         if data := await self.provider.fetchone(
             query, where.get_values() if where is not None else ()
         ):
-            return self._convert_data(model, data)
+            return self._convert_data(model, data, join)
 
     async def fetchall(
         self,
         model: ty.Type[Models],
         *,
+        join: Join[Models] | None = None,
         where: Operator | None = None,
         order_by: ty.Annotated[ty.Any, ModelField] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
-    ) -> list[Models]:
+    ):
         """
         Fetches all rows from db.
         :param model: model to fetch.
+        :param join: join statement.
         :param where: filtering statement.
         :param order_by: field for sorting.
         :param reverse: True - fetching from end of table.
@@ -195,12 +216,12 @@ class AsyncDBCore[Models]:
         :returns: list of model or empty list.
         """
         query = self._prepare_select_query(
-            model.__name__, where, order_by, reverse, limit, offset
+            model.__name__, join, where, order_by, reverse, limit, offset
         )
         data = await self.provider.fetchall(
             query, where.get_values() if where is not None else ()
         )
-        return [self._convert_data(model, obj) for obj in data] if data else []
+        return [self._convert_data(model, obj, join) for obj in data] if data else []
 
     async def save(self, obj: Models) -> None:
         """

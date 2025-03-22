@@ -32,6 +32,7 @@ class Field:
     Contains name and python type.
     """
 
+    model_name: str
     name: str
     python_type: ty.Type
     unique: bool = False
@@ -50,7 +51,7 @@ class Field:
             if isclass(self.python_type)
             else repr(self.python_type)
         )
-        return f"<Field {self.name!r}:{type_name}>"
+        return f"<Field {self.model_name}{self.name}:{type_name}>"
 
 
 @dataclasses.dataclass
@@ -104,7 +105,7 @@ def prepare_model(model: ty.Type) -> ModelSignature:
     if not dataclasses.is_dataclass(model):
         raise TypeError(f"Model `{model.__name__}` is not a dataclass")
     watch_changes(model)
-    signature = ModelSignature(model.__name__)
+    signature = ModelSignature(model_name := model.__name__)
     for field_name, field_type in ty.get_type_hints(model, include_extras=True).items():
         unique = False
         if ty.get_origin(field_type) is ty.Annotated:
@@ -115,7 +116,7 @@ def prepare_model(model: ty.Type) -> ModelSignature:
         if ty.get_origin(field_type) in {ty.Union, tys.UnionType}:
             field_type = UnionType(*ty.get_args(field_type))
             lt_gt = any(field_type.is_contains_type(x) for x in LT_GT_SUPPORTED)
-        field = Field(field_name, field_type, unique)
+        field = Field(model_name, field_name, field_type, unique)
         signature.fields.append(field)
         setattr(
             model,

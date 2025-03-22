@@ -9,6 +9,7 @@ from contextlib import suppress
 from datetime import datetime, date, time
 from enum import Enum
 from functools import wraps
+from inspect import isclass
 
 import orjson
 
@@ -56,7 +57,7 @@ class BaseProvider[ConnType](ABC):
         'INSERT INTO "{table_name}" ({fields}) VALUES ({values})'
     )
     SELECT_QUERY_TEMPLATE = (
-        'SELECT * FROM "{table_name}"{where}{order_by}{desc}{limit}{offset}'
+        'SELECT * FROM "{table_name}"{join}{where}{order_by}{desc}{limit}{offset}'
     )
     UPDATE_QUERY_TEMPLATE = 'UPDATE "{table_name}" SET {fields}{where}'
     DELETE_FROM_QUERY_TEMPLATE = 'DELETE FROM "{table_name}"{where}'
@@ -161,6 +162,7 @@ class BaseProvider[ConnType](ABC):
     def prepare_select_query(
         self,
         table_name: str,
+        join: str | None = None,
         where: str | None = None,
         order_by: str | None = None,
         reverse: bool = False,
@@ -169,6 +171,7 @@ class BaseProvider[ConnType](ABC):
     ) -> str:
         return self.SELECT_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
+            join=f" {join}" if join else "",
             where=(
                 f" WHERE {self._paste_placeholders(where)}" if where is not None else ""
             ),
@@ -243,7 +246,10 @@ class BaseProvider[ConnType](ABC):
         :param field_type: Python data type.
         :return: SQL data type from `TYPING_MAP` or `DEFAULT_FIELD_TYPE`.
         """
-        return self.TYPING_MAP.get(field_type.__name__, self.DEFAULT_FIELD_TYPE)
+        return self.TYPING_MAP.get(
+            (field_type if isclass(field_type) else field_type.__class__).__name__,
+            self.DEFAULT_FIELD_TYPE,
+        )
 
     def _paste_placeholders(self, query: str) -> str:
         placeholders_count = len(

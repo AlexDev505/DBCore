@@ -13,7 +13,7 @@ def contains(
 
 
 def group_by[T](
-    field: ty.Annotated[ty.Any, ModelField], objs: ty.Sequence[T]
+    field: ty.Annotated[ty.Any, ModelField], objs: list[T]
 ) -> dict[ty.Any, list[T]]:
     """
     Groups objects by field.
