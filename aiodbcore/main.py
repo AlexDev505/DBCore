@@ -94,23 +94,30 @@ class AsyncDBCore[Models]:
             )
             await self.provider.execute(query)
 
-    async def insert(self, obj: Models) -> Models:
+    async def insert(self, objs) -> ty.Any:
         """
         Inserts obj to bd.
-        :param obj: obj to insert.
+        :param objs: objs to insert.
         :returns: The same object, but with an identifier in the database.
         """
-        signature = self.signatures[obj.__class__.__name__]
-        field_names = []
+        if not isinstance(objs, list):
+            objs = [objs]
+        if len(set(type(x) for x in objs)) != 1:
+            raise ValueError("objects must be same types")
+        signature = self.signatures[objs[0].__class__.__name__]
+        field_names = [field.name for field in signature.fields if field.name != "id"]
         values = []
-        for field in signature.fields:
-            if field.name != "id":
-                field_names.append(field.name)
-                values.append(getattr(obj, field.name))
-        query = self.provider.prepare_insert_query(signature.name, field_names)
-        obj_id = await self.provider.execute_insert_query(query, values)
-        obj.id = obj_id
-        return obj
+        for obj in objs:
+            for field in signature.fields:
+                if field.name != "id":
+                    values.append(getattr(obj, field.name))
+        query = self.provider.prepare_insert_query(
+            signature.name, field_names, len(objs)
+        )
+        obj_ids = await self.provider.execute_insert_query(query, values)
+        for obj, obj_id in zip(objs, obj_ids):
+            obj.id = obj_id
+        return objs if len(objs) > 1 else objs[0]
 
     def _prepare_select_query(
         self,

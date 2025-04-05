@@ -26,7 +26,10 @@ class AsyncDBCore[Models]:
 
     async def execute(self, query: str, args: ty.Sequence[ty.Any] = ()): ...
     async def create_tables(self) -> None: ...
+    @ty.overload
     async def insert[Model](self, obj: Model) -> Model: ...
+    @ty.overload
+    async def insert[Model](self, objs: list[Model]) -> list[Model]: ...
     def _prepare_select_query(
         self,
         model_name: str,
@@ -91,17 +94,6 @@ class AsyncDBCore[Models]:
         limit: int | None = None,
         offset: int = 0,
     ) -> tuple[Model | None, JoinModel] | None: ...
-    async def fetchone(
-        self,
-        model: ty.Type[Models],
-        *,
-        join: Join[Models] | None = None,
-        where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
-        reverse: bool = False,
-        limit: int | None = None,
-        offset: int = 0,
-    ) -> ty.Any: ...
     @ty.overload
     async def fetchall[Model](
         self,
@@ -150,17 +142,6 @@ class AsyncDBCore[Models]:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[tuple[Model | None, JoinModel]]: ...
-    async def fetchall(
-        self,
-        model: ty.Type[Models],
-        *,
-        join: Join[Models] | None = None,
-        where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
-        reverse: bool = False,
-        limit: int | None = None,
-        offset: int = 0,
-    ) -> ty.Any: ...
     async def save(self, obj: Models) -> None: ...
     async def update(
         self,

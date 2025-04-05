@@ -19,8 +19,7 @@ async def main():
     await db.create_tables()  # Creates all tables
 
     # insert some data in db
-    await db.insert(User(name="Stas", age=21))
-    await db.insert(User(name="Alex", age=20))
+    await db.insert([User(name="Stas", age=21), User(name="Alex", age=20)])
     zahar = await db.insert(User(name="Zahar", age=15))
     await db.insert(Chat(title="726 room"))
 

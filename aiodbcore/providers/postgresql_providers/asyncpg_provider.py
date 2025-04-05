@@ -22,7 +22,7 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
         "(id SERIAL PRIMARY KEY NOT NULL, {fields})"
     )
     INSERT_INTO_QUERY_TEMPLATE = (
-        'INSERT INTO "{table_name}" ({fields}) VALUES ({values}) RETURNING id'
+        'INSERT INTO "{table_name}" ({fields}) VALUES {rows} RETURNING id'
     )
 
     DEFAULT_FIELD_TYPE = "BYTEA"
@@ -48,10 +48,10 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, *args)
 
-    async def _execute_insert_query(self, query, values) -> int:
+    async def _execute_insert_query(self, query, values) -> list[int]:
         async with self.ensure_connection() as connection:
-            row = await connection.fetchrow(query, *values)
-            return row.get("id")
+            rows = await connection.fetch(query, *values)
+            return [row.get("id") for row in rows]
 
     async def _fetchone(self, query, args=()) -> tuple[ty.Any]:
         async with self.ensure_connection() as connection:

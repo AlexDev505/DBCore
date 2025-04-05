@@ -169,7 +169,7 @@ def field_operator(
             if not field.compare_type(type(other)):
                 raise TypeError(f"unable to compare {field} and `{other}`")
 
-        return op[1](f"{field.model_name.lower()}.{field.name}", other)
+        return op[1](f'"{field.model_name.lower()}".{field.name}', other)
 
     return _wrapper
 

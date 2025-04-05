@@ -54,7 +54,7 @@ class BaseProvider[ConnType](ABC):
         "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, {fields})"
     )
     INSERT_INTO_QUERY_TEMPLATE = (
-        'INSERT INTO "{table_name}" ({fields}) VALUES ({values})'
+        'INSERT INTO "{table_name}" ({fields}) VALUES {rows}  RETURNING id'
     )
     SELECT_QUERY_TEMPLATE = (
         'SELECT * FROM "{table_name}"{join}{where}{order_by}{desc}{limit}{offset}'
@@ -132,18 +132,31 @@ class BaseProvider[ConnType](ABC):
         )
 
     def prepare_insert_query(
-        self, table_name: str, field_names: ty.Sequence[str]
+        self, table_name: str, field_names: ty.Sequence[str], rows: int
     ) -> str:
         return self.INSERT_INTO_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
             fields=", ".join(field_names),
-            values=", ".join(
-                self.PLACEHOLDER(i) for i in range(1, len(field_names) + 1)
+            rows=", ".join(
+                [
+                    "("
+                    + ", ".join(
+                        self.PLACEHOLDER(i)
+                        for i in range(
+                            1 + pad * len(field_names),
+                            len(field_names) + 1 + pad * len(field_names),
+                        )
+                    )
+                    + ")"
+                    for pad in range(rows)
+                ]
             ),
         )
 
     @translate_exceptions
-    async def execute_insert_query(self, query: str, args: ty.Sequence[ty.Any]) -> int:
+    async def execute_insert_query(
+        self, query: str, args: ty.Sequence[ty.Any]
+    ) -> list[int]:
         """
         Executes SQL insert query.
         :param query: SQL statement.
@@ -156,7 +169,7 @@ class BaseProvider[ConnType](ABC):
     @abstractmethod
     async def _execute_insert_query(
         self, query: str, values: ty.Sequence[ty.Any]
-    ) -> int:
+    ) -> list[int]:
         raise NotImplementedError()
 
     def prepare_select_query(
