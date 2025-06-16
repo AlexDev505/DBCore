@@ -11,7 +11,6 @@ sys.path.append("..")
 from aiodbcore import AsyncDBCore, utils
 from aiodbcore.joins import InnerJoin, LeftJoin
 from aiodbcore.models import Field
-from aiodbcore.utils import contains
 
 DB_PATH = "sqlite+aiosqlite://:memory:"
 
@@ -56,7 +55,8 @@ async def main():
     await db.update(
         Slot,
         {Slot.occupied: True},
-        where=contains(Slot.id, [slot.id for slot in slots]),
+        where=utils.contains(Slot.id, [slot.id for slot in slots]),
+        # where=Slot.id.contained([slot.id for slot in slots]),  # It`s same
     )
 
     # gets all slots and groups by `date` field
@@ -85,6 +85,7 @@ async def main():
         Slot,
         join=LeftJoin(Booking, (Booking.slot_id, Slot.id)),
         where=utils.is_null(Booking.id),
+        # where=Booking.id.is_null()  # It`s same,
     )
     slots = utils.group_by(Slot.date, slots_without_bookings)
     print("Slots without bookings grouped by `date`:")

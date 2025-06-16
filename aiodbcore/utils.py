@@ -5,21 +5,21 @@ from .operators import ContainedCmpOperator, IsNullCmpOperator
 
 
 def contains[T](
-    field: ty.Annotated[ty.Any, Field[T]], collection: list[T] | tuple[T, ...]
+    field: Field[T], collection: list[T] | tuple[T, ...]
 ) -> ContainedCmpOperator:
     if not isinstance(field, Field):
         raise ValueError(f"first argument must be field of registered model")
     return field.contained(collection)
 
 
-def is_null(field: ty.Annotated[ty.Any, Field]) -> IsNullCmpOperator:
+def is_null(field: Field) -> IsNullCmpOperator:
     if not isinstance(field, Field):
         raise ValueError(f"first argument must be field of registered model")
     return field.is_null()
 
 
 def group_by[FT, T: ty.Any | tuple](
-    field: ty.Annotated[ty.Any, Field[FT]], objs: list[T]
+    field: Field[FT], objs: list[T]
 ) -> dict[FT, list[T]]:
     """
     Groups objects by field.
@@ -29,7 +29,7 @@ def group_by[FT, T: ty.Any | tuple](
     """
     if not isinstance(field, Field):
         raise ValueError(f"first argument must be field of registered model")
-    result: dict[ty.Any, list[T]] = {}
+    result: dict[FT, list[T]] = {}
     i: int | None = None
     if isinstance(objs[0], tuple):
         i = next(
