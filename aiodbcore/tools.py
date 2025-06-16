@@ -1,5 +1,6 @@
 import hashlib
 import typing as ty
+from datetime import date, datetime, time
 
 
 def watch_changes(_cls: ty.Type | None = None, hash_func=hashlib.md5):
@@ -93,5 +94,18 @@ def get_changed_attributes(obj: ty.Any) -> tuple[str, ...]:
         varname
         for varname, value in obj.__dict__.items()
         if not varname.startswith("_")
-        and hashes.get(varname, None) != hash_func(str(value).encode()).hexdigest()
+        and hashes.get(varname, None)
+        != hash_func(str(value).encode()).hexdigest()
     )
+
+
+class Construct[T](ty.Protocol):
+    def __call__(self, *args, **kwargs) -> T: ...
+
+
+class DTConstruct[T](ty.Protocol):
+    def fromisoformat(self, value: str) -> T: ...
+
+
+def is_dt_type(obj: ty.Any) -> ty.TypeGuard[DTConstruct]:
+    return obj in {datetime, date, time}

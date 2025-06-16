@@ -24,8 +24,11 @@ class Operator(ABC):
     def __or__(self, other: Operator) -> OrOperator:
         return OrOperator(self, other)
 
+    def __invert__(self) -> NotOperator:
+        return NotOperator(self)
+
     @abstractmethod
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Renders operator to SQL code.
         """
@@ -118,7 +121,10 @@ class LogicalOperator(Operator, ABC):
         self.second_operand = second_operand
 
     def get_values(self) -> ty.Sequence[ty.Any]:
-        return *self.first_operand.get_values(), *self.second_operand.get_values()
+        return (
+            *self.first_operand.get_values(),
+            *self.second_operand.get_values(),
+        )
 
     def __str__(self):
         return f"{self.first_operand!r} {self.sign} {self.second_operand!r}"
@@ -133,3 +139,18 @@ class AndOperator(LogicalOperator):
 
 class OrOperator(LogicalOperator):
     sign = "OR"
+
+
+class NotOperator(Operator):
+    sign = "NOT"
+
+    def __init__(self, operand: Operator):
+        self.operand = operand
+
+    def get_values(self) -> ty.Sequence[ty.Any]:
+        return self.operand.get_values()
+
+    def __repr__(self):
+        return f"{self.sign} ({self.operand})"
+
+    __str__ = __repr__

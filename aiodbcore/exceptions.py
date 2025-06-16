@@ -6,24 +6,43 @@ class DBError(Exception):
 
     def __init__(
         self,
-        query: str,
-        args: ty.Sequence[ty.Any],
-        base_exc: Exception,
         msg: str | None = None,
+        base_exc: Exception | None = None,
         **extra: ty.Any,
     ):
-        self.query = query
-        self.args = args
         self.base_exc = base_exc
         self.extra = extra
         self.msg = (msg or self.msg).format(**self.extra)
 
     def __str__(self) -> str:
-        return (
-            f"{self.msg} on query {self.query} with args {self.args}."
+        exc_msg = (
             f" Base exc {type(self.base_exc).__name__}: {self.base_exc}"
+            if self.base_exc
+            else ""
         )
+        return f"{self.msg}{exc_msg}"
 
 
-class UniqueRequiredError(DBError):
-    msg: str = "Value for field `{field_name}` must be unique."
+class QueryError(DBError):
+    def __init__(
+        self,
+        query: str,
+        params: ty.Sequence[ty.Any],
+        base_exc: Exception,
+        msg: str | None = None,
+        **extra: ty.Any,
+    ):
+        msg = (
+            msg or self.msg
+        ) + " on query {self.query} with args {self.params}."
+        super().__init__(msg, base_exc, **extra)
+        self.query = query
+        self.params = params
+
+
+class UniqueRequiredError(QueryError):
+    msg = "Value for field `{field_name}` must be unique."
+
+
+class ConnectionIsNotAccrued(DBError):
+    msg = "Connection is not accrued"

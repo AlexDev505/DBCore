@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import typing as ty
 
-
 if ty.TYPE_CHECKING:
-    from .models import ModelField
-    from .models import ModelSignature
+    from .joins import InnerJoin, Join, LeftJoin, RightJoin
+    from .models import Field, ModelSignature
     from .operators import Operator
     from .providers import BaseProvider
-    from .joins import Join, InnerJoin, LeftJoin, RightJoin
 
 class AsyncDBCore[Models]:
     signatures: dict[str, ModelSignature] = ...
@@ -35,17 +33,36 @@ class AsyncDBCore[Models]:
         model_name: str,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: ModelField | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> str: ...
-    def _convert_data(
+    @ty.overload
+    def _convert_data[Model](
+        self, model: ty.Type[Model], data: tuple[ty.Any], join: None = None
+    ) -> Model: ...
+    @ty.overload
+    def _convert_data[Model, JoinModel](
         self,
-        model: ty.Type[Models],
+        model: ty.Type[Model],
         data: tuple[ty.Any],
-        join: Join[Models] | None = None,
-    ) -> Models | tuple[Models | None, Models | None]: ...
+        join: InnerJoin[JoinModel],
+    ) -> tuple[Model, JoinModel]: ...
+    @ty.overload
+    def _convert_data[Model, JoinModel](
+        self,
+        model: ty.Type[Model],
+        data: tuple[ty.Any],
+        join: LeftJoin[JoinModel],
+    ) -> tuple[Model, JoinModel | None]: ...
+    @ty.overload
+    def _convert_data[Model, JoinModel](
+        self,
+        model: ty.Type[Model],
+        data: tuple[ty.Any],
+        join: RightJoin[JoinModel],
+    ) -> tuple[Model | None, JoinModel]: ...
     @ty.overload
     async def fetchone[Model](
         self,
@@ -53,7 +70,7 @@ class AsyncDBCore[Models]:
         *,
         join: None = None,
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -65,7 +82,7 @@ class AsyncDBCore[Models]:
         *,
         join: InnerJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -77,7 +94,7 @@ class AsyncDBCore[Models]:
         *,
         join: LeftJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -89,7 +106,7 @@ class AsyncDBCore[Models]:
         *,
         join: RightJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -101,7 +118,7 @@ class AsyncDBCore[Models]:
         *,
         join: None = None,
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -113,7 +130,7 @@ class AsyncDBCore[Models]:
         *,
         join: InnerJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -125,7 +142,7 @@ class AsyncDBCore[Models]:
         *,
         join: LeftJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -137,7 +154,7 @@ class AsyncDBCore[Models]:
         *,
         join: RightJoin[JoinModel],
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -146,7 +163,7 @@ class AsyncDBCore[Models]:
     async def update(
         self,
         model: ty.Type[Models],
-        fields: dict[ty.Any, ty.Any],
+        fields: dict[Field, ty.Any],
         *,
         where: Operator | None = None,
     ) -> None: ...

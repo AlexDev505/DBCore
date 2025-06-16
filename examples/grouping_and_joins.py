@@ -2,29 +2,32 @@ from __future__ import annotations
 
 import asyncio
 import random
+import sys
 from dataclasses import dataclass
 from datetime import date, time, timedelta
 
+sys.path.append("..")
+
 from aiodbcore import AsyncDBCore, utils
 from aiodbcore.joins import InnerJoin, LeftJoin
+from aiodbcore.models import Field
 from aiodbcore.utils import contains
-
 
 DB_PATH = "sqlite+aiosqlite://:memory:"
 
 
 @dataclass
 class Slot:
-    id: int | None = None
-    date: date = 0
-    time: time = 0
-    occupied: bool = False
+    id: Field[int | None] = Field(None)
+    date: Field[date] = Field(date.today())
+    time: Field[time] = Field(time())
+    occupied: Field[bool] = Field(False)
 
 
 @dataclass
 class Booking:
-    id: int | None = None
-    slot_id: int | None = None
+    id: Field[int | None] = Field(None)
+    slot_id: Field[int | None] = Field(None)
 
 
 class DB(AsyncDBCore[Slot | Booking]):

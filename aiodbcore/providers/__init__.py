@@ -16,7 +16,9 @@ def get_provider(db_url: str) -> ty.Type[BaseProvider]:
             r"(?P<provider>.+?)(\+(?P<library>.+?))?://(?P<db>.+)", db_url
         )
     ):
-        raise ValueError("Invalid db url. pass url like `sqlite+aiosqlite://db.path`")
+        raise ValueError(
+            "Invalid db url. pass url like `sqlite+aiosqlite://db.path`"
+        )
     provider = match.group("provider")
     library = match.group("library")
     if provider == "postgres":

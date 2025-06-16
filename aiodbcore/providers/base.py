@@ -6,14 +6,16 @@ import string
 import typing as ty
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from enum import Enum
 from functools import wraps
 from inspect import isclass
 
 import orjson
 
-from ..exceptions import DBError
+from ..exceptions import ConnectionIsNotAccrued, QueryError
+from ..models import UnionType
+from ..tools import Construct, is_dt_type
 
 
 def translate_exceptions(func):
@@ -38,8 +40,8 @@ class BaseProvider[ConnType](ABC):
 
     DEFAULT_FIELD_TYPE = "BLOB"
     """
-    default data type. 
-    will be used if the type of field is not defined in `TYPING_MAP` 
+    default data type.
+    will be used if the type of field is not defined in `TYPING_MAP`
     """
 
     PLACEHOLDER: ty.Callable[[int], str] = staticmethod(lambda _: "?")
@@ -56,9 +58,7 @@ class BaseProvider[ConnType](ABC):
     INSERT_INTO_QUERY_TEMPLATE = (
         'INSERT INTO "{table_name}" ({fields}) VALUES {rows}  RETURNING id'
     )
-    SELECT_QUERY_TEMPLATE = (
-        'SELECT * FROM "{table_name}"{join}{where}{order_by}{desc}{limit}{offset}'
-    )
+    SELECT_QUERY_TEMPLATE = 'SELECT * FROM "{table_name}"{join}{where}{order_by}{desc}{limit}{offset}'
     UPDATE_QUERY_TEMPLATE = 'UPDATE "{table_name}" SET {fields}{where}'
     DELETE_FROM_QUERY_TEMPLATE = 'DELETE FROM "{table_name}"{where}'
     DROP_TABLE_QUERY_TEMPLATE = 'DROP TABLE "{table_name}"'
@@ -118,7 +118,7 @@ class BaseProvider[ConnType](ABC):
     def prepare_create_table_query(
         self, table_name: str, fields: dict[str, tuple[ty.Any, bool]]
     ) -> str:
-        fields = (
+        query_fields = (
             self.CREATE_TABLE_FIELD_TEMPLATE.format(
                 field_name=field_name,
                 type=self._get_sql_type(field_type),
@@ -128,7 +128,7 @@ class BaseProvider[ConnType](ABC):
             if field_name != "id"
         )
         return self.CREATE_TABLE_QUERY_TEMPLATE.format(
-            table_name=table_name.lower(), fields=", ".join(fields)
+            table_name=table_name.lower(), fields=", ".join(query_fields)
         )
 
     def prepare_insert_query(
@@ -186,7 +186,9 @@ class BaseProvider[ConnType](ABC):
             table_name=table_name.lower(),
             join=f" {join}" if join else "",
             where=(
-                f" WHERE {self._paste_placeholders(where)}" if where is not None else ""
+                f" WHERE {self._paste_placeholders(where)}"
+                if where is not None
+                else ""
             ),
             order_by=f" ORDER BY {order_by}" if order_by is not None else "",
             desc=f" DESC" if reverse else "",
@@ -233,26 +235,37 @@ class BaseProvider[ConnType](ABC):
         raise NotImplementedError()
 
     def prepare_update_query(
-        self, table_name: str, field_names: ty.Sequence[str], where: str | None = None
+        self,
+        table_name: str,
+        field_names: ty.Sequence[str],
+        where: str | None = None,
     ) -> str:
         return self._paste_placeholders(
             self.UPDATE_QUERY_TEMPLATE.format(
                 table_name=table_name.lower(),
-                fields=", ".join(f"{field_name}={{}}" for field_name in field_names),
+                fields=", ".join(
+                    f"{field_name}={{}}" for field_name in field_names
+                ),
                 where=(f" WHERE {where}" if where is not None else ""),
             )
         )
 
-    def prepare_delete_query(self, table_name: str, where: str | None = None) -> str:
+    def prepare_delete_query(
+        self, table_name: str, where: str | None = None
+    ) -> str:
         return self.DELETE_FROM_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
             where=(
-                f" WHERE {self._paste_placeholders(where)}" if where is not None else ""
+                f" WHERE {self._paste_placeholders(where)}"
+                if where is not None
+                else ""
             ),
         )
 
     def prepare_drop_table_query(self, table_name: str) -> str:
-        return self.DROP_TABLE_QUERY_TEMPLATE.format(table_name=table_name.lower())
+        return self.DROP_TABLE_QUERY_TEMPLATE.format(
+            table_name=table_name.lower()
+        )
 
     def _get_sql_type(self, field_type: ty.Any) -> str:
         """
@@ -260,7 +273,9 @@ class BaseProvider[ConnType](ABC):
         :return: SQL data type from `TYPING_MAP` or `DEFAULT_FIELD_TYPE`.
         """
         return self.TYPING_MAP.get(
-            (field_type if isclass(field_type) else field_type.__class__).__name__,
+            (
+                field_type if isclass(field_type) else field_type.__class__
+            ).__name__,
             self.DEFAULT_FIELD_TYPE,
         )
 
@@ -285,6 +300,8 @@ class BaseProvider[ConnType](ABC):
         elif hasattr(obj, "to_dump"):
             obj = obj.to_dump()
         elif dataclasses.is_dataclass(obj):
+            if isclass(obj):
+                raise TypeError("Cannot adapt dataclass class")
             obj = dataclasses.asdict(obj)
         elif isinstance(obj, dict) and type(obj) is not dict:
             obj = dict(obj)
@@ -299,7 +316,9 @@ class BaseProvider[ConnType](ABC):
         """
         return orjson.dumps(obj)
 
-    def convert_value(self, obj: ty.Any, python_type: ty.Type) -> ty.Any:
+    def convert_value[T](
+        self, obj: ty.Any, python_type: Construct[T]
+    ) -> T | None:
         """
         Wraps raw data form db to suitable type for model.
         """
@@ -310,8 +329,8 @@ class BaseProvider[ConnType](ABC):
 
         obj = self._default_convert_value(obj)
         with suppress(ValueError, TypeError):
-            if python_type in {datetime, date, time}:
-                return python_type.fromisoformat(obj)  # noqa
+            if is_dt_type(python_type):
+                return python_type.fromisoformat(obj)
             if dataclasses.is_dataclass(python_type):
                 if type(obj) is dict:
                     return python_type(**obj)
@@ -335,9 +354,9 @@ class BaseProvider[ConnType](ABC):
         return db_path
 
     def _translate_exception(
-        self, exception: Exception, query: str, args: ty.Sequence[ty.Any]
-    ) -> DBError:
-        return DBError(query, args, exception)
+        self, exception: Exception, query: str, params: ty.Sequence[ty.Any]
+    ) -> QueryError:
+        return QueryError(query, params, exception)
 
 
 class ConnectionWrapper[ConnType]:
@@ -354,14 +373,18 @@ class ConnectionWrapper[ConnType]:
     async def __aenter__(self) -> ConnType:
         await self._lock.acquire()
         await self.ensure_connection()
+        if self.connection is None:
+            raise ConnectionIsNotAccrued()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *_):
         self._lock.release()
 
 
 class PoolConnectionWrapper[ConnType]:
-    def __init__(self, provider: BaseProvider[ConnType], pool_init_lock: asyncio.Lock):
+    def __init__(
+        self, provider: BaseProvider[ConnType], pool_init_lock: asyncio.Lock
+    ):
         self.provider = provider
         self.connection: ConnType | None = None
         self._pool_init_lock = pool_init_lock
@@ -375,7 +398,9 @@ class PoolConnectionWrapper[ConnType]:
     async def __aenter__(self) -> ConnType:
         await self.ensure_connection()
         self.connection = await self.provider.connections_pool.acquire()
+        if self.connection is None:
+            raise ConnectionIsNotAccrued()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *_):
         await self.provider.connections_pool.release(self.connection)

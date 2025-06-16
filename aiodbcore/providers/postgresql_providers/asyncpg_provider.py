@@ -65,10 +65,12 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
     def modify_db_path(db_path: str) -> str:
         return re.sub(r"\+asyncpg", "", db_path)
 
-    def _translate_exception(self, exception, query, args):
+    def _translate_exception(self, exception, query, params):
         if isinstance(exception, asyncpg.UniqueViolationError):
-            if match := re.search(r"Key \((.+?)\)=", getattr(exception, "detail", "")):
+            if match := re.search(
+                r"Key \((.+?)\)=", getattr(exception, "detail", "")
+            ):
                 return UniqueRequiredError(
-                    query, args, exception, field_name=match.group(1)
+                    query, params, exception, field_name=match.group(1)
                 )
-        return super()._translate_exception(exception, query, args)
+        return super()._translate_exception(exception, query, params)

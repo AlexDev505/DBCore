@@ -57,11 +57,14 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
     def modify_db_path(db_path: str) -> str:
         return db_path.removeprefix("sqlite+aiosqlite://")
 
-    def _translate_exception(self, exception, query, args):
+    def _translate_exception(self, exception, query, params):
         if isinstance(exception, aiosqlite.IntegrityError):
             if exception.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE":
                 text = exception.args[0]
                 return UniqueRequiredError(
-                    query, args, exception, field_name=text[text.rfind(": ") + 2 :]
+                    query,
+                    params,
+                    exception,
+                    field_name=text[text.rfind(": ") + 2 :],
                 )
-        return super()._translate_exception(exception, query, args)
+        return super()._translate_exception(exception, query, params)

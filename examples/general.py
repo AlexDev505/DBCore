@@ -1,9 +1,11 @@
 import asyncio
+import sys
+
+sys.path.append("..")
+
+from models import Chat, User
 
 from aiodbcore import AsyncDBCore
-from aiodbcore.utils import contains
-from models import User, Chat
-
 
 DB_PATH = "sqlite+aiosqlite://:memory:"
 
@@ -31,7 +33,9 @@ async def main():
     print(f"chat: {chat}")
 
     # updating data
-    await db.update(User, {User.moneys: 1500}, where=contains(User.age, (20, 21)))
+    await db.update(
+        User, {User.moneys: 1500}, where=User.age.contained((20, 21))
+    )  # where User.age IN (20, 21)
     print("new moneys:", *(await db.fetchall(User)), sep="\n")
     # update one instance and save it
     zahar.moneys += 1000

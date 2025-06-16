@@ -1,7 +1,7 @@
 # DBCore [![Python 3.12+](https://badgen.net/badge/Python/3.12+/blue)](https://www.python.org/downloads/) [![License:MIT](https://badgen.net/badge/License/MIT/blue)](https://github.com/AlexDev505/DBCore/blob/master/LICENSE.txt)
 
-ORM that does not require the developer to create models specifically for it. 
-dbcore works with dataclasses and allows you to connect from one interface 
+ORM that does not require the developer to create models specifically for it.
+dbcore works with dataclasses and allows you to connect from one interface
 to both local databases (sqlite+aiosqlite) and remote databases (postgres+asyncpg).
 
 ### Small example
@@ -40,4 +40,20 @@ async def main():
 if __name__ == '__main__':
     asyncio.run(main())
 
+```
+
+The declaration of the model from the example above is certainly simple and elegant, but this method does not allow the IDE to show type hints, and static typers will complain. Therefore, there is another way to declare models, it will require minimal changes in the code.
+
+```python
+from dataclasses import dataclas
+from aiodbcore.models import Field
+
+@dataclass
+class MyModel:
+    # Here you can wrap default values ​​in `Field`
+    # if you don't want complaints from static typers,
+    # but it is not necessary
+    id: Field[int | None] = Field(None)
+    foo: Field[int] = 0
+    bar: Filed[str] = ""
 ```

@@ -3,11 +3,9 @@ from __future__ import annotations
 import types as tys
 import typing as ty
 
-from .models import ModelField
-from .models import ModelSignature, prepare_model
+from .models import Field, ModelSignature, prepare_model
 from .providers import get_provider
 from .tools import get_changed_attributes
-
 
 if ty.TYPE_CHECKING:
     from .joins import Join
@@ -32,16 +30,16 @@ class AsyncDBCore[Models]:
     ) -> None:
         """
         Initialize the db.
-        :param database_path: path to db.
+        :param database_path: Path to db.
         :param db_name: Connection name is used for multi connection.
-        :param connection_kwargs: params for connection provider.
+        :param connection_kwargs: Params for connection provider.
         """
         if database_path is cls.db_names:
             raise RuntimeError("This DB already initialized")
         if db_name in cls.db_names.values():
             raise ValueError("DB with this name already initialized")
 
-        generic_types = ty.get_args(cls.__orig_bases__[0])[0]  # noqa
+        generic_types = ty.get_args(tys.get_original_bases(cls)[0])[0]
         if type(generic_types) is ty.TypeVar:
             raise NotImplementedError("")
         elif type(generic_types) in {ty.Union, tys.UnionType}:
@@ -50,7 +48,9 @@ class AsyncDBCore[Models]:
             models = [generic_types]
 
         if not cls.signatures:
-            cls.signatures = {model.__name__: prepare_model(model) for model in models}
+            cls.signatures = {
+                model.__name__: prepare_model(model) for model in models
+            }
 
         cls.dbs[db_name] = get_provider(database_path)(
             database_path, **connection_kwargs
@@ -67,9 +67,9 @@ class AsyncDBCore[Models]:
     def __init__(self, db: str = "main"):
         if not self.dbs:
             raise RuntimeError("DB is not initialized")
-        self.provider = self.dbs.get(db)
-        if not self.provider:
+        if not (provider := self.dbs.get(db)):
             raise ValueError(f"DB `{db}` is not initialized")
+        self.provider: BaseProvider = provider
 
     async def execute(self, query: str, args: ty.Sequence[ty.Any] = ()):
         """
@@ -105,7 +105,9 @@ class AsyncDBCore[Models]:
         if len(set(type(x) for x in objs)) != 1:
             raise ValueError("objects must be same types")
         signature = self.signatures[objs[0].__class__.__name__]
-        field_names = [field.name for field in signature.fields if field.name != "id"]
+        field_names = [
+            field.name for field in signature.fields if field.name != "id"
+        ]
         values = []
         for obj in objs:
             for field in signature.fields:
@@ -124,7 +126,7 @@ class AsyncDBCore[Models]:
         model_name: str,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: ModelField | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -133,7 +135,7 @@ class AsyncDBCore[Models]:
             model_name,
             join=str(join) if join else None,
             where=str(where) if where is not None else None,
-            order_by=order_by.field.name if order_by is not None else None,
+            order_by=order_by.name if order_by is not None else None,
             reverse=reverse,
             limit=limit,
             offset=offset,
@@ -144,7 +146,7 @@ class AsyncDBCore[Models]:
         model: ty.Type[Models],
         data: tuple[ty.Any],
         join: Join[Models] | None = None,
-    ) -> Models | tuple[Models | None, Models | None]:
+    ):
         """
         Converts raw data from db to model.
         """
@@ -164,9 +166,11 @@ class AsyncDBCore[Models]:
                 f"but {len(data)} given"
             )
 
-        kwargs = {}
+        kwargs: dict[str, ty.Any] = {}
         for field, value in zip(signature.fields, data):
-            kwargs[field.name] = self.provider.convert_value(value, field.python_type)
+            kwargs[field.name] = self.provider.convert_value(
+                value, field.python_type
+            )
 
         return model(**kwargs)
 
@@ -176,7 +180,7 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -206,7 +210,7 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: ty.Annotated[ty.Any, ModelField] | None = None,
+        order_by: Field | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -228,7 +232,11 @@ class AsyncDBCore[Models]:
         data = await self.provider.fetchall(
             query, where.get_values() if where is not None else ()
         )
-        return [self._convert_data(model, obj, join) for obj in data] if data else []
+        return (
+            [self._convert_data(model, obj, join) for obj in data]
+            if data
+            else []
+        )
 
     async def save(self, obj: Models) -> None:
         """
@@ -251,7 +259,7 @@ class AsyncDBCore[Models]:
     async def update(
         self,
         model: ty.Type[Models],
-        fields: dict[ty.Any, ty.Any],
+        fields: dict[Field, ty.Any],
         *,
         where: Operator | None = None,
     ) -> None:
@@ -263,7 +271,7 @@ class AsyncDBCore[Models]:
         """
         query = self.provider.prepare_update_query(
             model.__name__,
-            tuple(field.field.name for field in fields),
+            tuple(field.name for field in fields),
             where=str(where) if where is not None else None,
         )
         await self.execute(
@@ -274,7 +282,9 @@ class AsyncDBCore[Models]:
             ),
         )
 
-    async def delete(self, model: ty.Type[Models], *, where: Operator | None) -> None:
+    async def delete(
+        self, model: ty.Type[Models], *, where: Operator | None
+    ) -> None:
         """
         Deletes row from db.
         :param model: model from which to delete.
@@ -283,7 +293,9 @@ class AsyncDBCore[Models]:
         query = self.provider.prepare_delete_query(
             model.__name__, where=str(where) if where is not None else None
         )
-        await self.execute(query, where.get_values() if where is not None else ())
+        await self.execute(
+            query, where.get_values() if where is not None else ()
+        )
 
     async def drop_table(self, model: ty.Type[Models]) -> None:
         """
