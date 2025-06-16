@@ -251,6 +251,7 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
         field.init(model_name, field_name, field_type, unique, True, lt_gt)
         signature.fields.append(field)
         setattr(model, field_name, field)
+        getattr(model, field_name)
     if (id_field := signature.fields[0]).name != "id":
         raise AttributeError(
             f"The first attribute of the model `{model.__name__}` should be `id`"
