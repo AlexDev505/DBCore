@@ -173,7 +173,7 @@ class Field[T]:
             if isclass(self.python_type)
             else repr(self.python_type)
         )
-        return f"<Field {self.model_name}{self.name}:{type_name}>"
+        return f"<Field {self.model_name}.{self.name}:{type_name}>"
 
 
 @dataclasses.dataclass
