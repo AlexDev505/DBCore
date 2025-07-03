@@ -87,7 +87,7 @@ class ContainedCmpOperator(CmpOperator):
         return tuple(self.value)
 
     def __repr__(self):
-        return f"{self.field_name} {self.sign} ({", ".join(["{}"] * len(self.value))})"
+        return f"{self.field_name} {self.sign} ({', '.join(['{}'] * len(self.value))})"
 
     __str__ = __repr__
 

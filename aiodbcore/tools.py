@@ -93,9 +93,11 @@ def get_changed_attributes(obj: ty.Any) -> tuple[str, ...]:
     return tuple(
         varname
         for varname, value in obj.__dict__.items()
-        if not varname.startswith("_")
-        and hashes.get(varname, None)
-        != hash_func(str(value).encode()).hexdigest()
+        if (
+            not varname.startswith("_")
+            and hashes.get(varname, None)
+            != hash_func(str(value).encode()).hexdigest()
+        )
     )
 
 
