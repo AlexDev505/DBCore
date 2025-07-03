@@ -4,7 +4,6 @@ import typing as ty
 
 from ...exceptions import UniqueRequiredError
 
-
 try:
     import asyncpg
 except ModuleNotFoundError as err:

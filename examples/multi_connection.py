@@ -1,8 +1,10 @@
 import asyncio
+import sys
 
+sys.path.append("..")
 from models import Chat
-from aiodbcore import AsyncDBCore
 
+from aiodbcore import AsyncDBCore
 
 SQLITE_DB_PATH = "sqlite+aiosqlite://:memory:"
 POSTGRES_DB_PATH = "postgresql+asyncpg://user:pass@host/db"

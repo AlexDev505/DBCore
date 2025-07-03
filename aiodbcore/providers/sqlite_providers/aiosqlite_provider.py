@@ -3,7 +3,6 @@ import typing as ty
 
 from ...exceptions import UniqueRequiredError
 
-
 try:
     import aiosqlite
 except ModuleNotFoundError as err:

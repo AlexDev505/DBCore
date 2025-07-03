@@ -2,7 +2,6 @@ import asyncio
 import sys
 
 sys.path.append("..")
-
 from models import Chat, User
 
 from aiodbcore import AsyncDBCore
