@@ -26,8 +26,8 @@ LT_GT_SUPPORTED = {int, float, datetime, date, time}
 
 
 def field_operator[T, **P, RT: CmpOperator](
-    func: ty.Callable[ty.Concatenate[Field, P], ty.Type[RT]],
-) -> ty.Callable[ty.Concatenate[Field, P], RT]:
+    func: ty.Callable[ty.Concatenate[Field[T], P], ty.Type[RT]],
+) -> ty.Callable[ty.Concatenate[Field[T], P], RT]:
     """
     Decorator for `Field` comparing operators.
     Check operator is available for this field.
@@ -45,7 +45,7 @@ def field_operator[T, **P, RT: CmpOperator](
     }
 
     @wraps(func)
-    def _wrapper(self: Field, *args: P.args, **kwargs: P.kwargs) -> RT:
+    def _wrapper(self: Field[T], *args: P.args, **kwargs: P.kwargs) -> RT:
         other = args[0] if args else kwargs.get("other")
         op_name = naming_map[func.__name__]
         if not self.inited:

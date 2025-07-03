@@ -15,8 +15,8 @@ from .operators import (
 )
 
 def field_operator[T, **P, RT: CmpOperator](
-    func: ty.Callable[ty.Concatenate[Field, P], ty.Type[RT]],
-) -> ty.Callable[ty.Concatenate[Field, P], RT]: ...
+    func: ty.Callable[P, ty.Type[RT]],
+) -> ty.Callable[P, RT]: ...
 
 class Field[T]:
     def __init__(self, default_value: T):
