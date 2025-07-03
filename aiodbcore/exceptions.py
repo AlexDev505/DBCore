@@ -32,12 +32,9 @@ class QueryError(DBError):
         msg: str | None = None,
         **extra: ty.Any,
     ):
-        msg = (
-            msg or self.msg
-        ) + " on query {self.query} with args {self.params}."
+        msg = (msg or self.msg) + " on query `{query}` with args {params}."
+        extra.update(dict(query=query, params=params))
         super().__init__(msg, base_exc, **extra)
-        self.query = query
-        self.params = params
 
 
 class UniqueRequiredError(QueryError):
