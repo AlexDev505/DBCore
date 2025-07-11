@@ -126,7 +126,7 @@ class AsyncDBCore[Models]:
         model_name: str,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -135,7 +135,16 @@ class AsyncDBCore[Models]:
             model_name,
             join=str(join) if join else None,
             where=str(where) if where is not None else None,
-            order_by=order_by.name if order_by is not None else None,
+            order_by=(
+                ", ".join(
+                    f"{x.model_name.lower()}.{x.name}"
+                    for x in (
+                        order_by if isinstance(order_by, tuple) else (order_by,)
+                    )
+                )
+                if order_by is not None
+                else None
+            ),
             reverse=reverse,
             limit=limit,
             offset=offset,
@@ -180,7 +189,7 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -210,7 +219,7 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,

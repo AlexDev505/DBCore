@@ -8,6 +8,7 @@ if ty.TYPE_CHECKING:
     from .operators import Operator
     from .providers import BaseProvider
 
+
 class AsyncDBCore[Models]:
     signatures: dict[str, ModelSignature] = ...
     dbs: dict[str, BaseProvider] = ...
@@ -33,7 +34,7 @@ class AsyncDBCore[Models]:
         model_name: str,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -70,7 +71,7 @@ class AsyncDBCore[Models]:
         *,
         join: None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -82,7 +83,7 @@ class AsyncDBCore[Models]:
         *,
         join: InnerJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -94,7 +95,7 @@ class AsyncDBCore[Models]:
         *,
         join: LeftJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -106,7 +107,7 @@ class AsyncDBCore[Models]:
         *,
         join: RightJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -118,7 +119,7 @@ class AsyncDBCore[Models]:
         *,
         join: None = None,
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -130,7 +131,7 @@ class AsyncDBCore[Models]:
         *,
         join: InnerJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -142,7 +143,7 @@ class AsyncDBCore[Models]:
         *,
         join: LeftJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
@@ -154,7 +155,7 @@ class AsyncDBCore[Models]:
         *,
         join: RightJoin[JoinModel],
         where: Operator | None = None,
-        order_by: Field | None = None,
+        order_by: Field | tuple[Field] | None = None,
         reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
