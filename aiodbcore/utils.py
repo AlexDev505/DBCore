@@ -35,7 +35,7 @@ def group_by[FT, T: ty.Any | tuple](
         i = next(
             filter(
                 lambda x: field.model_name == objs[0][x].__class__.__name__,
-                range(len(objs)),
+                range(len(objs[0])),
             )
         )
     for obj in objs:
