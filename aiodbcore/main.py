@@ -4,6 +4,7 @@ import types as tys
 import typing as ty
 
 from .models import Field, ModelSignature, prepare_model
+from .operators import InvertedField
 from .providers import get_provider
 from .tools import get_changed_attributes
 
@@ -94,7 +95,9 @@ class AsyncDBCore[Models]:
             )
             await self.provider.execute(query)
 
-    async def insert(self, objs) -> ty.Any:
+    async def insert(
+        self, objs: Models | list[Models], /
+    ) -> Models | list[Models]:
         """
         Inserts obj to bd.
         :param objs: objs to insert.
@@ -126,26 +129,26 @@ class AsyncDBCore[Models]:
         model_name: str,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | tuple[Field, ...] | None = None,
-        reverse: bool = False,
+        order_by: (
+            Field | InvertedField | tuple[Field | InvertedField, ...] | None
+        ) = None,
         limit: int | None = None,
         offset: int = 0,
     ) -> str:
+        if order_by and not isinstance(order_by, tuple):
+            order_by = (order_by,)
         return self.provider.prepare_select_query(
             model_name,
             join=str(join) if join else None,
             where=str(where) if where is not None else None,
             order_by=(
-                ", ".join(
-                    f"{x.model_name.lower()}.{x.name}"
-                    for x in (
-                        order_by if isinstance(order_by, tuple) else (order_by,)
-                    )
+                tuple(
+                    (str(x) if isinstance(x, Field) else (str(x), True))
+                    for x in order_by
                 )
                 if order_by is not None
                 else None
             ),
-            reverse=reverse,
             limit=limit,
             offset=offset,
         )
@@ -153,7 +156,7 @@ class AsyncDBCore[Models]:
     def _convert_data(
         self,
         model: ty.Type[Models],
-        data: tuple[ty.Any],
+        data: tuple[ty.Any, ...],
         join: Join[Models] | None = None,
     ):
         """
@@ -189,8 +192,9 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | tuple[Field, ...] | None = None,
-        reverse: bool = False,
+        order_by: (
+            Field | InvertedField | tuple[Field | InvertedField, ...] | None
+        ) = None,
         limit: int | None = None,
         offset: int = 0,
     ):
@@ -200,13 +204,12 @@ class AsyncDBCore[Models]:
         :param join: join statement.
         :param where: filtering statement.
         :param order_by: field for sorting.
-        :param reverse: True - fetching from end of table.
         :param limit: count of rows to fetch.
         :param offset: offset of rows to fetch.
         :returns: one model or None.
         """
         query = self._prepare_select_query(
-            model.__name__, join, where, order_by, reverse, limit, offset
+            model.__name__, join, where, order_by, limit, offset
         )
         if data := await self.provider.fetchone(
             query, where.get_values() if where is not None else ()
@@ -219,8 +222,9 @@ class AsyncDBCore[Models]:
         *,
         join: Join[Models] | None = None,
         where: Operator | None = None,
-        order_by: Field | tuple[Field, ...] | None = None,
-        reverse: bool = False,
+        order_by: (
+            Field | InvertedField | tuple[Field | InvertedField, ...] | None
+        ) = None,
         limit: int | None = None,
         offset: int = 0,
     ):
@@ -229,14 +233,13 @@ class AsyncDBCore[Models]:
         :param model: model to fetch.
         :param join: join statement.
         :param where: filtering statement.
-        :param order_by: field for sorting.
-        :param reverse: True - fetching from end of table.
+        :param order_by: field for sorting..
         :param limit: count of rows to fetch.
         :param offset: offset of rows to fetch.
         :returns: list of model or empty list.
         """
         query = self._prepare_select_query(
-            model.__name__, join, where, order_by, reverse, limit, offset
+            model.__name__, join, where, order_by, limit, offset
         )
         data = await self.provider.fetchall(
             query, where.get_values() if where is not None else ()
@@ -247,7 +250,7 @@ class AsyncDBCore[Models]:
             else []
         )
 
-    async def save(self, obj: Models) -> None:
+    async def save(self, obj: Models, /) -> None:
         """
         Saves obj to db.
         :param obj: obj to save.
@@ -306,7 +309,7 @@ class AsyncDBCore[Models]:
             query, where.get_values() if where is not None else ()
         )
 
-    async def drop_table(self, model: ty.Type[Models]) -> None:
+    async def drop_table(self, model: ty.Type[Models], /) -> None:
         """
         Drops table from db.
         :param model: model to drop.

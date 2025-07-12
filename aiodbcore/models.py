@@ -15,6 +15,7 @@ from .operators import (
     EqCmpOperator,
     GeCmpOperator,
     GtCmpOperator,
+    InvertedField,
     IsNullCmpOperator,
     LeCmpOperator,
     LtCmpOperator,
@@ -51,14 +52,16 @@ def field_operator[T, **P, RT: CmpOperator](
         if not self.inited:
             raise RuntimeError(f"Model '{self.model_name}' is not initialized")
         if not getattr(self, op_name):
-            raise TypeError(f"{self} does not support {func.__name__} operator")
+            raise TypeError(
+                f"{self!r} does not support {func.__name__} operator"
+            )
         elif (op := func(self, *args, **kwargs)) not in {
             IsNullCmpOperator,
             ContainedCmpOperator,
         }:
             if not self.compare_type(type(other)):
-                raise TypeError(f"unable to compare {self} and {other!r}")
-        return op(f'"{self.model_name.lower()}".{self.name}', other)
+                raise TypeError(f"unable to compare {self!r} and {other!r}")
+        return op(str(self), other)
 
     return _wrapper
 
@@ -157,15 +160,21 @@ class Field[T]:
     ) -> ty.Type[ContainedCmpOperator]:
         for el in sequence:
             if not self.compare_type(type(el)):
-                raise TypeError(f"unable to compare {self} and `{el}`")
+                raise TypeError(f"unable to compare {self!r} and `{el!r}`")
         return ContainedCmpOperator
 
     @field_operator
     def is_null(self) -> ty.Type[IsNullCmpOperator]:
         return IsNullCmpOperator
 
+    def __invert__(self) -> InvertedField:
+        return InvertedField(str(self))
+
     def __hash__(self):
         return hash(self.name)
+
+    def __str__(self):
+        return f"{self.model_name}.{self.name}"
 
     def __repr__(self):
         type_name = (
@@ -173,7 +182,7 @@ class Field[T]:
             if isclass(self.python_type)
             else repr(self.python_type)
         )
-        return f"<Field {self.model_name}.{self.name}:{type_name}>"
+        return f"<Field {self}:{type_name}>"
 
 
 @dataclasses.dataclass

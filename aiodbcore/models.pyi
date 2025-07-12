@@ -8,15 +8,18 @@ from .operators import (
     EqCmpOperator,
     GeCmpOperator,
     GtCmpOperator,
+    InvertedField,
     IsNullCmpOperator,
     LeCmpOperator,
     LtCmpOperator,
     NeCmpOperator,
 )
 
+
 def field_operator[T, **P, RT: CmpOperator](
     func: ty.Callable[P, ty.Type[RT]],
 ) -> ty.Callable[P, RT]: ...
+
 
 class Field[T]:
     def __init__(self, default_value: T):
@@ -29,6 +32,7 @@ class Field[T]:
         self.unique: bool
         self.eq: bool
         self.lt_gt: bool
+
     @ty.overload
     def __get__(self, obj: None, owner: type) -> ty.Self: ...
     @ty.overload
@@ -62,23 +66,30 @@ class Field[T]:
     ) -> ty.Type[ContainedCmpOperator]: ...
     @field_operator
     def is_null(self) -> ty.Type[IsNullCmpOperator]: ...
+    def __invert__(self) -> InvertedField: ...
     def __hash__(self): ...
+    def __str__(self): ...
     def __repr__(self): ...
+
 
 @dataclasses.dataclass
 class ModelSignature:
     name: str
     fields: list[Field]
 
+
 class UnionType[T: ty.Any]:
     def __init__(self, *types: ty.Type[T]):
         self.types: list[T]
         self.nullable: bool
+
     def __call__(self, obj: ty.Any) -> T: ...
     def is_contains_type(self, type_: ty.Type) -> bool: ...
     def __repr__(self) -> str: ...
 
+
 def prepare_model(model: ty.Type) -> ModelSignature: ...
+
 
 class FieldMod(Enum):
     UNIQUE: str

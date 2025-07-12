@@ -5,6 +5,7 @@ import dataclasses
 import string
 import typing as ty
 from abc import ABC, abstractmethod
+from asyncio.windows_events import SelectorEventLoop
 from contextlib import suppress
 from datetime import date, datetime, time
 from enum import Enum
@@ -16,6 +17,14 @@ import orjson
 from ..exceptions import ConnectionIsNotAccrued, QueryError
 from ..models import UnionType
 from ..tools import Construct, is_dt_type
+
+type Query = str
+type CreateTableQuery = Query
+type InsertQuery = Query
+type SelectQuery = Query
+type UpdateQuery = Query
+type DeleteQuery = Query
+type DropTableQuery = Query
 
 
 def translate_exceptions(func):
@@ -51,17 +60,23 @@ class BaseProvider[ConnType](ABC):
     """
 
     """ SQL queries templates """
-    CREATE_TABLE_QUERY_TEMPLATE = (
+    CREATE_TABLE_QUERY_TEMPLATE: CreateTableQuery = (
         'CREATE TABLE IF NOT EXISTS "{table_name}" '
         "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, {fields})"
     )
-    INSERT_INTO_QUERY_TEMPLATE = (
+    INSERT_INTO_QUERY_TEMPLATE: InsertQuery = (
         'INSERT INTO "{table_name}" ({fields}) VALUES {rows}  RETURNING id'
     )
-    SELECT_QUERY_TEMPLATE = 'SELECT * FROM "{table_name}"{join}{where}{order_by}{desc}{limit}{offset}'
-    UPDATE_QUERY_TEMPLATE = 'UPDATE "{table_name}" SET {fields}{where}'
-    DELETE_FROM_QUERY_TEMPLATE = 'DELETE FROM "{table_name}"{where}'
-    DROP_TABLE_QUERY_TEMPLATE = 'DROP TABLE "{table_name}"'
+    SELECT_QUERY_TEMPLATE: SelectQuery = (
+        'SELECT * FROM "{table_name}"{join}{where}{order_by}{limit}{offset}'
+    )
+    UPDATE_QUERY_TEMPLATE: UpdateQuery = (
+        'UPDATE "{table_name}" SET {fields}{where}'
+    )
+    DELETE_FROM_QUERY_TEMPLATE: DeleteQuery = (
+        'DELETE FROM "{table_name}"{where}'
+    )
+    DROP_TABLE_QUERY_TEMPLATE: DropTableQuery = 'DROP TABLE "{table_name}"'
 
     CREATE_TABLE_FIELD_TEMPLATE = "{field_name} {type}{unique}"
     UNIQUE_FIELD = "UNIQUE"
@@ -101,7 +116,7 @@ class BaseProvider[ConnType](ABC):
         raise NotImplementedError()
 
     @translate_exceptions
-    async def execute(self, query: str, args: ty.Sequence[ty.Any] = ()):
+    async def execute(self, query: Query, args: ty.Sequence[ty.Any] = ()):
         """
         Executes SQL query.
         :param query: SQL statement.
@@ -112,12 +127,12 @@ class BaseProvider[ConnType](ABC):
         return await self._execute(query, args)
 
     @abstractmethod
-    async def _execute(self, query: str, args: ty.Sequence[ty.Any] = ()):
+    async def _execute(self, query: Query, args: ty.Sequence[ty.Any] = ()):
         raise NotImplementedError()
 
     def prepare_create_table_query(
         self, table_name: str, fields: dict[str, tuple[ty.Any, bool]]
-    ) -> str:
+    ) -> CreateTableQuery:
         query_fields = (
             self.CREATE_TABLE_FIELD_TEMPLATE.format(
                 field_name=field_name,
@@ -133,7 +148,7 @@ class BaseProvider[ConnType](ABC):
 
     def prepare_insert_query(
         self, table_name: str, field_names: ty.Sequence[str], rows: int
-    ) -> str:
+    ) -> InsertQuery:
         return self.INSERT_INTO_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
             fields=", ".join(field_names),
@@ -155,7 +170,7 @@ class BaseProvider[ConnType](ABC):
 
     @translate_exceptions
     async def execute_insert_query(
-        self, query: str, args: ty.Sequence[ty.Any]
+        self, query: InsertQuery, args: ty.Sequence[ty.Any]
     ) -> list[int]:
         """
         Executes SQL insert query.
@@ -168,7 +183,7 @@ class BaseProvider[ConnType](ABC):
 
     @abstractmethod
     async def _execute_insert_query(
-        self, query: str, values: ty.Sequence[ty.Any]
+        self, query: InsertQuery, values: ty.Sequence[ty.Any]
     ) -> list[int]:
         raise NotImplementedError()
 
@@ -177,11 +192,10 @@ class BaseProvider[ConnType](ABC):
         table_name: str,
         join: str | None = None,
         where: str | None = None,
-        order_by: str | None = None,
-        reverse: bool = False,
+        order_by: tuple[str | tuple[str, bool], ...] | None = None,
         limit: int | None = None,
         offset: int = 0,
-    ) -> str:
+    ) -> SelectQuery:
         return self.SELECT_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
             join=f" {join}" if join else "",
@@ -190,16 +204,28 @@ class BaseProvider[ConnType](ABC):
                 if where is not None
                 else ""
             ),
-            order_by=f" ORDER BY {order_by}" if order_by is not None else "",
-            desc=f" DESC" if reverse else "",
+            order_by=(
+                (
+                    " ORDER BY "
+                    + ", ".join(
+                        f"{field} {'DESC' if reverse else ''}"
+                        for field, reverse in map(
+                            lambda x: x if isinstance(x, tuple) else (x, False),
+                            order_by,
+                        )
+                    )
+                )
+                if order_by is not None
+                else ""
+            ),
             limit=f" LIMIT {limit}" if limit is not None else "",
             offset=f" OFFSET {offset}" if offset else "",
         )
 
     @translate_exceptions
     async def fetchone(
-        self, query: str, args: ty.Sequence[ty.Any] = ()
-    ) -> tuple[ty.Any] | None:
+        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
+    ) -> tuple[ty.Any, ...] | None:
         """
         Executes SQL select query and return one row.
         :param query: SQL statement.
@@ -211,14 +237,14 @@ class BaseProvider[ConnType](ABC):
 
     @abstractmethod
     async def _fetchone(
-        self, query: str, args: ty.Sequence[ty.Any] = ()
-    ) -> tuple[ty.Any] | None:
+        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
+    ) -> tuple[ty.Any, ...] | None:
         raise NotImplementedError()
 
     @translate_exceptions
     async def fetchall(
-        self, query: str, args: ty.Sequence[ty.Any] = ()
-    ) -> list[tuple[ty.Any]]:
+        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
+    ) -> list[tuple[ty.Any, ...]]:
         """
         Executes SQL select query and return all rows.
         :param query: SQL statement.
@@ -230,8 +256,8 @@ class BaseProvider[ConnType](ABC):
 
     @abstractmethod
     async def _fetchall(
-        self, query: str, args: ty.Sequence[ty.Any] = ()
-    ) -> list[tuple[ty.Any]]:
+        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
+    ) -> list[tuple[ty.Any, ...]]:
         raise NotImplementedError()
 
     def prepare_update_query(
@@ -239,7 +265,7 @@ class BaseProvider[ConnType](ABC):
         table_name: str,
         field_names: ty.Sequence[str],
         where: str | None = None,
-    ) -> str:
+    ) -> UpdateQuery:
         return self._paste_placeholders(
             self.UPDATE_QUERY_TEMPLATE.format(
                 table_name=table_name.lower(),
@@ -252,7 +278,7 @@ class BaseProvider[ConnType](ABC):
 
     def prepare_delete_query(
         self, table_name: str, where: str | None = None
-    ) -> str:
+    ) -> DeleteQuery:
         return self.DELETE_FROM_QUERY_TEMPLATE.format(
             table_name=table_name.lower(),
             where=(
@@ -262,7 +288,7 @@ class BaseProvider[ConnType](ABC):
             ),
         )
 
-    def prepare_drop_table_query(self, table_name: str) -> str:
+    def prepare_drop_table_query(self, table_name: str) -> DropTableQuery:
         return self.DROP_TABLE_QUERY_TEMPLATE.format(
             table_name=table_name.lower()
         )

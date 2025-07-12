@@ -154,3 +154,11 @@ class NotOperator(Operator):
         return f"{self.sign} ({self.operand})"
 
     __str__ = __repr__
+
+
+class InvertedField:
+    def __init__(self, field: str):
+        self.field = field
+
+    def __str__(self):
+        return self.field

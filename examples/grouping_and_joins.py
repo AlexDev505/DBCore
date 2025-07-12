@@ -76,7 +76,10 @@ async def main():
     print()
 
     slots_with_bookings = await db.fetchall(
-        Slot, join=LeftJoin(Booking, (Booking.slot_id, Slot.id))
+        Slot,
+        join=LeftJoin(Booking, (Booking.slot_id, Slot.id)),
+        # Order by date and time in descending order
+        order_by=(Slot.date, ~Slot.time),
     )
     print("All slots:", *slots_with_bookings, sep="\n")
     print()
