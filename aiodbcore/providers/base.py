@@ -5,7 +5,6 @@ import dataclasses
 import string
 import typing as ty
 from abc import ABC, abstractmethod
-from asyncio.windows_events import SelectorEventLoop
 from contextlib import suppress
 from datetime import date, datetime, time
 from enum import Enum
