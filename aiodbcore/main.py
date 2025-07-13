@@ -103,7 +103,7 @@ class AsyncDBCore[Models]:
         :param objs: objs to insert.
         :returns: The same object, but with an identifier in the database.
         """
-        if not isinstance(objs, list):
+        if not (return_list := isinstance(objs, list)):
             objs = [objs]
         if len(set(type(x) for x in objs)) != 1:
             raise ValueError("objects must be same types")
@@ -122,7 +122,7 @@ class AsyncDBCore[Models]:
         obj_ids = await self.provider.execute_insert_query(query, values)
         for obj, obj_id in zip(objs, obj_ids):
             obj.id = obj_id
-        return objs if len(objs) > 1 else objs[0]
+        return objs if return_list else objs[0]
 
     def _prepare_select_query(
         self,
