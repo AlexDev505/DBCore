@@ -1,4 +1,4 @@
-# DBCore [![Python 3.12+](https://badgen.net/badge/Python/3.12+/blue)](https://www.python.org/downloads/) [![License:MIT](https://badgen.net/badge/License/MIT/blue)](https://github.com/AlexDev505/DBCore/blob/master/LICENSE.txt)
+# DBCore [![Python 3.12+](https://badgen.net/badge/Python/3.12+/blue)](https://www.python.org/downloads/) [![License:MIT](https://badgen.net/badge/License/MIT/blue)](https://github.com/AlexDev505/DBCore/blob/master/LICENSE.txt) [![PyPi version](https://img.shields.io/pypi/v/aiodbcore.svg)](https://pypi.python.org/pypi/aiodbcore/)
 
 ORM that does not require the developer to create models specifically for it.
 dbcore works with dataclasses and allows you to connect from one interface
@@ -51,7 +51,7 @@ from aiodbcore.models import Field
 
 @dataclass
 class MyModel:
-    # Here you can wrap default values ​​in `Field`
+    # Here you can wrap default values in `Field`
     # if you don't want complaints from static typers,
     # but it is not necessary
     id: Field[int | None] = Field(None)

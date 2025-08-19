@@ -1,0 +1,23 @@
+[project]
+name = "aiodbcore"
+version = "0.1.1"
+description = "A modest orm that does not require you to adjust your code to it"
+readme = "README.md"
+authors = [
+    { name = "AlexDev505", email = "aleks.filiov@yandex.ru" }
+]
+license = "MIT"
+license-files = ["LICENSE.txt"]
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "asyncpg>=0.30.0",
+    "orjson>=3.11.2",
+]
+
+[project.urls]
+Repository = "https://github.com/AlexDev505/DBCore"
+
+[build-system]
+requires = ["uv_build>=0.8.11,<0.9.0"]
+build-backend = "uv_build"

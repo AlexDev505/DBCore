@@ -179,10 +179,10 @@ class AsyncDBCore[Models]:
         offset: int = 0,
     ) -> list[tuple[Model | None, JoinModel]]: ...
     async def save(self, obj: Models, /) -> None: ...
-    async def update(
+    async def update[T](
         self,
         model: ty.Type[Models],
-        fields: dict[Field, ty.Any],
+        fields: dict[Field[T], T],
         *,
         where: Operator | None = None,
     ) -> None: ...

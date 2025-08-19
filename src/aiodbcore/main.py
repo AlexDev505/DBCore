@@ -35,10 +35,9 @@ class AsyncDBCore[Models]:
         :param db_name: Connection name is used for multi connection.
         :param connection_kwargs: Params for connection provider.
         """
-        if database_path is cls.db_names:
-            raise RuntimeError("This DB already initialized")
-        if db_name in cls.db_names.values():
+        if db_name in cls.db_names:
             raise ValueError("DB with this name already initialized")
+        cls.db_names[db_name] = database_path
 
         generic_types = ty.get_args(tys.get_original_bases(cls)[0])[0]
         if type(generic_types) is ty.TypeVar:
