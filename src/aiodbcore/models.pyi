@@ -30,6 +30,7 @@ class Field[T]:
         self.name: str
         self.python_type: ty.Type[T] | UnionType[T]
         self.unique: bool
+        self.sql_type: SpecificSQLType | None
         self.eq: bool
         self.lt_gt: bool
 
@@ -44,6 +45,7 @@ class Field[T]:
         name: str,
         python_type: ty.Type[T] | UnionType[T],
         unique: bool = False,
+        sql_type: SpecificSQLType | None = None,
         eq: bool = True,
         lt_gt: bool = False,
     ) -> None: ...
@@ -93,3 +95,6 @@ def prepare_model(model: ty.Type) -> ModelSignature: ...
 
 class FieldMod(Enum):
     UNIQUE: str
+
+
+class SpecificSQLType(str): ...

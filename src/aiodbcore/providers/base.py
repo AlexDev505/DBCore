@@ -130,26 +130,28 @@ class BaseProvider[ConnType](ABC):
         raise NotImplementedError()
 
     def prepare_create_table_query(
-        self, table_name: str, fields: dict[str, tuple[ty.Any, bool]]
+        self,
+        table_name: str,
+        fields: dict[str, tuple[ty.Any, bool, str | None]],
     ) -> CreateTableQuery:
         query_fields = (
             self.CREATE_TABLE_FIELD_TEMPLATE.format(
                 field_name=field_name,
-                type=self._get_sql_type(field_type),
+                type=sql_type or self._get_sql_type(field_type),
                 unique=f" {self.UNIQUE_FIELD}" if unique else "",
             )
-            for field_name, (field_type, unique) in fields.items()
+            for field_name, (field_type, unique, sql_type) in fields.items()
             if field_name != "id"
         )
         return self.CREATE_TABLE_QUERY_TEMPLATE.format(
-            table_name=table_name.lower(), fields=", ".join(query_fields)
+            table_name=table_name, fields=", ".join(query_fields)
         )
 
     def prepare_insert_query(
         self, table_name: str, field_names: ty.Sequence[str], rows: int
     ) -> InsertQuery:
         return self.INSERT_INTO_QUERY_TEMPLATE.format(
-            table_name=table_name.lower(),
+            table_name=table_name,
             fields=", ".join(field_names),
             rows=", ".join(
                 [
@@ -196,7 +198,7 @@ class BaseProvider[ConnType](ABC):
         offset: int = 0,
     ) -> SelectQuery:
         return self.SELECT_QUERY_TEMPLATE.format(
-            table_name=table_name.lower(),
+            table_name=table_name,
             join=f" {join}" if join else "",
             where=(
                 f" WHERE {self._paste_placeholders(where)}"
@@ -267,7 +269,7 @@ class BaseProvider[ConnType](ABC):
     ) -> UpdateQuery:
         return self._paste_placeholders(
             self.UPDATE_QUERY_TEMPLATE.format(
-                table_name=table_name.lower(),
+                table_name=table_name,
                 fields=", ".join(
                     f"{field_name}={{}}" for field_name in field_names
                 ),
@@ -279,7 +281,7 @@ class BaseProvider[ConnType](ABC):
         self, table_name: str, where: str | None = None
     ) -> DeleteQuery:
         return self.DELETE_FROM_QUERY_TEMPLATE.format(
-            table_name=table_name.lower(),
+            table_name=table_name,
             where=(
                 f" WHERE {self._paste_placeholders(where)}"
                 if where is not None
@@ -288,9 +290,7 @@ class BaseProvider[ConnType](ABC):
         )
 
     def prepare_drop_table_query(self, table_name: str) -> DropTableQuery:
-        return self.DROP_TABLE_QUERY_TEMPLATE.format(
-            table_name=table_name.lower()
-        )
+        return self.DROP_TABLE_QUERY_TEMPLATE.format(table_name=table_name)
 
     def _get_sql_type(self, field_type: ty.Any) -> str:
         """

@@ -88,7 +88,11 @@ class AsyncDBCore[Models]:
             query = self.provider.prepare_create_table_query(
                 model_name,
                 {
-                    field.name: (field.python_type, field.unique)
+                    field.name: (
+                        field.python_type,
+                        field.unique,
+                        field.sql_type,
+                    )
                     for field in signature.fields
                 },
             )
