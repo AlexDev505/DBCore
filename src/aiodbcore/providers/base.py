@@ -15,7 +15,7 @@ import orjson
 
 from ..exceptions import ConnectionIsNotAccrued, QueryError
 from ..models import UnionType
-from ..tools import Construct, is_dt_type
+from ..tools import Construct, convert_type, is_dt_type
 
 type Query = str
 type CreateTableQuery = Query
@@ -354,13 +354,7 @@ class BaseProvider[ConnType](ABC):
 
         obj = self._default_convert_value(obj)
         with suppress(ValueError, TypeError):
-            if is_dt_type(python_type):
-                return python_type.fromisoformat(obj)
-            if dataclasses.is_dataclass(python_type):
-                if type(obj) is dict:
-                    return python_type(**obj)
-                return python_type(*obj)
-            return python_type(obj)
+            return convert_type(obj, python_type)
 
     @staticmethod
     def _default_convert_value(obj: ty.Any) -> ty.Any:

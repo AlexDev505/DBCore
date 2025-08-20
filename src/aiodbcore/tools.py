@@ -1,3 +1,4 @@
+import dataclasses
 import hashlib
 import typing as ty
 from datetime import date, datetime, time
@@ -111,3 +112,13 @@ class DTConstruct[T](ty.Protocol):
 
 def is_dt_type(obj: ty.Any) -> ty.TypeGuard[DTConstruct]:
     return obj in {datetime, date, time}
+
+
+def convert_type[T](obj: ty.Any, python_type: Construct[T]) -> T:
+    if is_dt_type(python_type):
+        return python_type.fromisoformat(obj)
+    if dataclasses.is_dataclass(python_type):
+        if type(obj) is dict:
+            return python_type(**obj)
+        return python_type(*obj)
+    return python_type(obj)

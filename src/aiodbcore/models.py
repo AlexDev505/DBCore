@@ -21,7 +21,7 @@ from .operators import (
     LtCmpOperator,
     NeCmpOperator,
 )
-from .tools import watch_changes
+from .tools import convert_type, watch_changes
 
 LT_GT_SUPPORTED = {int, float, datetime, date, time}
 
@@ -213,7 +213,7 @@ class UnionType[T: ty.Any]:
         """
         for type_ in self.types:
             with suppress(ValueError, TypeError):
-                return type_(obj)
+                return convert_type(obj, type_)
         raise ValueError(f"`{obj}` cant be {self}")
 
     def is_contains_type(self, type_: ty.Type) -> bool:

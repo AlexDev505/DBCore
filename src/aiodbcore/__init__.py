@@ -1,2 +1,2 @@
 from . import joins, models, utils
-from .main import AsyncDBCore
+from .main import AsyncDBCore as AsyncDBCore
