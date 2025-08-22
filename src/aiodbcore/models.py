@@ -10,8 +10,10 @@ from functools import wraps
 from inspect import isclass
 
 from .operators import (
+    AddOperator,
     CmpOperator,
     ContainedCmpOperator,
+    DivideOperator,
     EqCmpOperator,
     GeCmpOperator,
     GtCmpOperator,
@@ -19,11 +21,15 @@ from .operators import (
     IsNullCmpOperator,
     LeCmpOperator,
     LtCmpOperator,
+    MathOperator,
+    MultiplyOperator,
     NeCmpOperator,
+    SubOperator,
 )
 from .tools import convert_type, watch_changes
 
 LT_GT_SUPPORTED = {int, float, datetime, date, time}
+MATH_SUPPORTED = {int, float}
 
 
 def field_operator[T, **P, RT: CmpOperator](
@@ -62,6 +68,31 @@ def field_operator[T, **P, RT: CmpOperator](
             if not self.compare_type(type(other)):
                 raise TypeError(f"unable to compare {self!r} and {other!r}")
         return op(str(self), other)
+
+    return _wrapper
+
+
+def math_operator[T, **P, RT: MathOperator](
+    func: ty.Callable[ty.Concatenate[Field[T], P], ty.Type[RT]],
+) -> ty.Callable[ty.Concatenate[Field[T], P], RT]:
+    """
+    Decorator for `Field` math operators.
+    Check operator is available for this field.
+    Returns suitable instance of `MathOperator` class.
+    """
+
+    @wraps(func)
+    def _wrapper(self: Field[T], *args: P.args, **kwargs: P.kwargs) -> RT:
+        other = args[0] if args else kwargs.get("other")
+        if self.python_type not in MATH_SUPPORTED:
+            raise TypeError(
+                f"{self!r} does not support {func.__name__} operator"
+            )
+        if not self.compare_type(type(other)):
+            raise TypeError(
+                f"unable to execute math operation on {self!r} and {other!r}"
+            )
+        return func(self, *args, **kwargs)(other)
 
     return _wrapper
 
@@ -174,6 +205,22 @@ class Field[T]:
 
     def __invert__(self) -> InvertedField:
         return InvertedField(str(self))
+
+    @math_operator
+    def __add__(self, other: T) -> ty.Type[AddOperator]:
+        return AddOperator
+
+    @math_operator
+    def __sub__(self, other: T) -> ty.Type[SubOperator]:
+        return SubOperator
+
+    @math_operator
+    def __mul__(self, other: T) -> ty.Type[MultiplyOperator]:
+        return MultiplyOperator
+
+    @math_operator
+    def __div__(self, other: T) -> ty.Type[DivideOperator]:
+        return DivideOperator
 
     def __hash__(self):
         return hash(self.name)

@@ -4,7 +4,7 @@ import types as tys
 import typing as ty
 
 from .models import Field, ModelSignature, prepare_model
-from .operators import InvertedField
+from .operators import InvertedField, MathOperator
 from .providers import get_provider
 from .tools import get_changed_attributes
 
@@ -271,10 +271,10 @@ class AsyncDBCore[Models]:
             where=model.id == obj.id,
         )
 
-    async def update(
+    async def update[T](
         self,
         model: ty.Type[Models],
-        fields: dict[Field, ty.Any],
+        fields: dict[Field[T], T | MathOperator[T]],
         *,
         where: Operator | None = None,
     ) -> None:
@@ -286,13 +286,21 @@ class AsyncDBCore[Models]:
         """
         query = self.provider.prepare_update_query(
             model.__name__,
-            tuple(field.name for field in fields),
+            {
+                field.name: value.sign
+                if isinstance(value, MathOperator)
+                else "="
+                for field, value in fields.items()
+            },
             where=str(where) if where is not None else None,
         )
         await self.execute(
             query,
             (
-                *(value for value in fields.values()),
+                *(
+                    value.value if isinstance(value, MathOperator) else value
+                    for value in fields.values()
+                ),
                 *(where.get_values() if where is not None else ()),
             ),
         )

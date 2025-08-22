@@ -5,7 +5,7 @@ import typing as ty
 if ty.TYPE_CHECKING:
     from .joins import InnerJoin, Join, LeftJoin, RightJoin
     from .models import Field, ModelSignature
-    from .operators import InvertedField, Operator
+    from .operators import InvertedField, MathOperator, Operator
     from .providers import BaseProvider
 
 
@@ -182,7 +182,7 @@ class AsyncDBCore[Models]:
     async def update[T](
         self,
         model: ty.Type[Models],
-        fields: dict[Field[T], T],
+        fields: dict[Field[T], T | MathOperator[T]],
         *,
         where: Operator | None = None,
     ) -> None: ...

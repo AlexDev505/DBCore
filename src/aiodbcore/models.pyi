@@ -3,8 +3,10 @@ import typing as ty
 from enum import Enum
 
 from .operators import (
+    AddOperator,
     CmpOperator,
     ContainedCmpOperator,
+    DivideOperator,
     EqCmpOperator,
     GeCmpOperator,
     GtCmpOperator,
@@ -12,13 +14,19 @@ from .operators import (
     IsNullCmpOperator,
     LeCmpOperator,
     LtCmpOperator,
+    MathOperator,
+    MultiplyOperator,
     NeCmpOperator,
+    SubOperator,
 )
 
 
 def field_operator[T, **P, RT: CmpOperator](
     func: ty.Callable[P, ty.Type[RT]],
 ) -> ty.Callable[P, RT]: ...
+def math_operator[T, **P, RT: MathOperator](
+    func: ty.Callable[ty.Concatenate[Field[T], P], ty.Type[RT]],
+) -> ty.Callable[ty.Concatenate[Field[T], P], RT]: ...
 
 
 class Field[T]:
@@ -69,6 +77,14 @@ class Field[T]:
     @field_operator
     def is_null(self) -> ty.Type[IsNullCmpOperator]: ...
     def __invert__(self) -> InvertedField: ...
+    @math_operator
+    def __add__(self, other: T) -> ty.Type[AddOperator]: ...
+    @math_operator
+    def __sub__(self, other: T) -> ty.Type[SubOperator]: ...
+    @math_operator
+    def __mul__(self, other: T) -> ty.Type[MultiplyOperator]: ...
+    @math_operator
+    def __div__(self, other: T) -> ty.Type[DivideOperator]: ...
     def __hash__(self): ...
     def __str__(self): ...
     def __repr__(self): ...

@@ -162,3 +162,26 @@ class InvertedField:
 
     def __str__(self):
         return self.field
+
+
+class MathOperator[T](ABC):
+    sign: str
+
+    def __init__(self, value: T):
+        self.value = value
+
+
+class AddOperator(MathOperator):
+    sign = "+"
+
+
+class SubOperator(MathOperator):
+    sign = "-"
+
+
+class MultiplyOperator(MathOperator):
+    sign = "*"
+
+
+class DivideOperator(MathOperator):
+    sign = "/"

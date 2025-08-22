@@ -264,14 +264,19 @@ class BaseProvider[ConnType](ABC):
     def prepare_update_query(
         self,
         table_name: str,
-        field_names: ty.Sequence[str],
+        fields: dict[str, str],  # {field_name: math_operator or '=', ...}
         where: str | None = None,
     ) -> UpdateQuery:
         return self._paste_placeholders(
             self.UPDATE_QUERY_TEMPLATE.format(
                 table_name=table_name,
                 fields=", ".join(
-                    f"{field_name}={{}}" for field_name in field_names
+                    f"{
+                        f'{field_name}='
+                        if op == '='
+                        else f'{field_name}={field_name}{op}'
+                    }{{}}"
+                    for field_name, op in fields.items()
                 ),
                 where=(f" WHERE {where}" if where is not None else ""),
             )

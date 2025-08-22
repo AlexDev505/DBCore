@@ -33,7 +33,9 @@ async def main():
 
     # updating data
     await db.update(
-        User, {User.moneys: 1500}, where=User.age.contained((20, 21))
+        User,
+        {User.moneys: User.moneys + 1500},
+        where=User.age.contained((20, 21)),
     )  # where User.age IN (20, 21)
     print("new moneys:", *(await db.fetchall(User)), sep="\n")
     # update one instance and save it
