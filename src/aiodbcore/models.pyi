@@ -39,6 +39,7 @@ class Field[T]:
         self.python_type: ty.Type[T] | UnionType[T]
         self.unique: bool
         self.sql_type: SpecificSQLType | None
+        self.index: Index | None
         self.eq: bool
         self.lt_gt: bool
 
@@ -54,6 +55,7 @@ class Field[T]:
         python_type: ty.Type[T] | UnionType[T],
         unique: bool = False,
         sql_type: SpecificSQLType | None = None,
+        index: Index | None = None,
         eq: bool = True,
         lt_gt: bool = False,
     ) -> None: ...
@@ -114,3 +116,9 @@ class FieldMod(Enum):
 
 
 class SpecificSQLType(str): ...
+
+
+class Index:
+    def __init__(self, name: str, unique: bool = False):
+        self.name: str
+        self.unique: bool

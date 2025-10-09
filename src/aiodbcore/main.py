@@ -99,6 +99,24 @@ class AsyncDBCore[Models]:
             )
             await self.provider.execute(query)
 
+            indexes = {}
+            for field in signature.fields:
+                if not (index := field.index):
+                    continue
+                if index.name not in indexes:
+                    indexes[index.name] = {"fields": [], "unique": False}
+                indexes[index.name]["fields"].append(field.name)
+                if index.unique:
+                    indexes[index.name]["unique"] = True
+            for index_name, index_info in indexes.items():
+                query = self.provider.prepare_create_index_query(
+                    table_name=model_name,
+                    index_name=index_name,
+                    field_names=index_info["fields"],
+                    unique=index_info["unique"],
+                )
+                await self.provider.execute(query)
+
     async def insert(
         self, objs: Models | list[Models], /
     ) -> Models | list[Models]:

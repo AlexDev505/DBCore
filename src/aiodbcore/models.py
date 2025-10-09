@@ -108,6 +108,7 @@ class Field[T]:
         self.python_type: ty.Type[T] | UnionType[T] | None = None
         self.unique: bool | None = None
         self.sql_type: SpecificSQLType | None = None
+        self.index: Index | None = None
         self.eq: bool | None = None
         self.lt_gt: bool | None = None
 
@@ -133,6 +134,7 @@ class Field[T]:
         python_type: ty.Type[T] | UnionType[T],
         unique: bool = False,
         sql_type: SpecificSQLType | None = None,
+        index: Index | None = None,
         eq: bool = True,
         lt_gt: bool = False,
     ) -> None:
@@ -146,6 +148,7 @@ class Field[T]:
         :param unique: Is this field unique?
         :param sql_type: SQL type of this field.
             None - type will be inferred from python_type
+        :param index: Index of this field.
         :param eq: Are equation operators available for this field?
         :param lt_gt: Are comparing operators available for this field?
         """
@@ -154,6 +157,7 @@ class Field[T]:
         self.python_type = python_type
         self.unique = unique
         self.sql_type = sql_type
+        self.index = index
         self.eq = eq
         self.lt_gt = lt_gt
         self.inited = True
@@ -294,13 +298,19 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
         model, include_extras=True
     ).items():
         unique = False
-        sql_type = None
+        sql_type = index = None
         if ty.get_origin(field_type) is ty.Annotated:
             metadata = field_type.__metadata__
             unique = FieldMod.UNIQUE in metadata
             sql_type = next(
                 filter(lambda x: isinstance(x, SpecificSQLType), metadata), None
             )
+            index = next(
+                filter(lambda x: isinstance(x, Index) or x is Index, metadata),
+                None,
+            )
+            if index is Index:
+                index = Index(f"{field_name}_idx")
             field_type = ty.get_args(field_type)[0]
         if ty.get_origin(field_type) is Field:
             field = getattr(model, field_name, None)
@@ -314,7 +324,14 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
             field_type = UnionType(*ty.get_args(field_type))
             lt_gt = any(field_type.is_contains_type(x) for x in LT_GT_SUPPORTED)
         field.init(
-            model_name, field_name, field_type, unique, sql_type, True, lt_gt
+            model_name=model_name,
+            name=field_name,
+            python_type=field_type,
+            unique=unique,
+            sql_type=sql_type,
+            index=index,
+            eq=True,
+            lt_gt=lt_gt,
         )
         signature.fields.append(field)
         setattr(model, field_name, field)
@@ -337,3 +354,9 @@ class FieldMod(Enum):
 
 class SpecificSQLType(str):
     pass
+
+
+class Index:
+    def __init__(self, name: str, unique: bool = False):
+        self.name = name
+        self.unique = unique

@@ -2,14 +2,15 @@ import asyncio
 import sys
 
 sys.path.append("..")
-from models import Chat, User
+from models import Chat, Role, User
 
 from aiodbcore import AsyncDBCore
+from aiodbcore.exceptions import UniqueRequiredError
 
 DB_PATH = "sqlite+aiosqlite://:memory:"
 
 
-class DB(AsyncDBCore[User | Chat]):
+class DB(AsyncDBCore[User | Chat | Role]):
     async def get_old_peoples(self) -> list[User]:
         return await self.fetchall(User, where=User.age >= 20)
 
@@ -20,9 +21,22 @@ async def main():
     await db.create_tables()  # Creates all tables
 
     # insert some data in db
-    await db.insert([User(name="Stas", age=21), User(name="Alex", age=20)])
+    stas, alex = await db.insert(
+        [User(name="Stas", age=21), User(name="Alex", age=20)]
+    )
     zahar = await db.insert(User(name="Zahar", age=15))
-    await db.insert(Chat(title="726 room"))
+    await db.insert([Chat(title="726 room"), Chat(title="group N")])
+    await db.insert(
+        [
+            Role(chat_id=0, user_id=stas.id, title="guest"),
+            Role(chat_id=0, user_id=alex.id, title="creator"),
+            Role(chat_id=1, user_id=alex.id, title="creator"),
+        ]
+    )
+    try:
+        await db.insert(Role(chat_id=0, user_id=alex.id, title="admin"))
+    except UniqueRequiredError:
+        print("This user already has this role in this chat")
 
     # fetching data
     old_peoples = await db.get_old_peoples()

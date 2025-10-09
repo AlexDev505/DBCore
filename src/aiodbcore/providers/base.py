@@ -79,6 +79,9 @@ class BaseProvider[ConnType](ABC):
 
     CREATE_TABLE_FIELD_TEMPLATE = "{field_name} {type}{unique}"
     UNIQUE_FIELD = "UNIQUE"
+    CREATE_INDEX_TEMPLATE = (
+        'CREATE {unique}INDEX IF NOT EXISTS {name} ON "{table_name}"({fields})'
+    )
 
     connections_pool: ty.Any
     connection: ConnType | None
@@ -145,6 +148,20 @@ class BaseProvider[ConnType](ABC):
         )
         return self.CREATE_TABLE_QUERY_TEMPLATE.format(
             table_name=table_name, fields=", ".join(query_fields)
+        )
+
+    def prepare_create_index_query(
+        self,
+        table_name: str,
+        index_name: str,
+        field_names: ty.Sequence[str],
+        unique: bool = False,
+    ) -> str:
+        return self.CREATE_INDEX_TEMPLATE.format(
+            unique="UNIQUE " if unique else "",
+            name=index_name,
+            table_name=table_name,
+            fields=", ".join(field_names),
         )
 
     def prepare_insert_query(
