@@ -68,7 +68,7 @@ class AsyncDBCore[Models]:
     def __init__(self, db: str = "main"):
         if not self.dbs:
             raise RuntimeError("DB is not initialized")
-        if not (provider := self.dbs.get(db)):
+        if not (provider := self.dbs.get(self.db_names.get(db, ""))):
             raise ValueError(f"DB `{db}` is not initialized")
         self.provider: BaseProvider = provider
 
