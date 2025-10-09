@@ -17,13 +17,13 @@ if ty.TYPE_CHECKING:
 class AsyncDBCore[Models]:
     """
     Main db class.
-    You can implement your needs to the database in the classroom class
+    You can implement your queries to the database in the child class
     or use this class directly.
     """
 
     signatures: dict[str, ModelSignature] = {}
-    dbs: dict[str, BaseProvider] = {}
-    db_names: dict[str, str] = {}
+    dbs: dict[str, BaseProvider] = {}  # {db_path: provider}
+    db_names: dict[str, str] = {}  # {db_name: db_path}
 
     @classmethod
     def init(
@@ -52,9 +52,10 @@ class AsyncDBCore[Models]:
                 model.__name__: prepare_model(model) for model in models
             }
 
-        cls.dbs[db_name] = get_provider(database_path)(
-            database_path, **connection_kwargs
-        )
+        if database_path not in cls.dbs:
+            cls.dbs[database_path] = get_provider(database_path)(
+                database_path, **connection_kwargs
+            )
 
     @classmethod
     async def close_connections(cls) -> None:
