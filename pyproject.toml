@@ -1,6 +1,6 @@
 [project]
 name = "aiodbcore"
-version = "0.2.3"
+version = "0.3.0"
 description = "A modest orm that does not require you to adjust your code to it"
 readme = "README.md"
 authors = [
