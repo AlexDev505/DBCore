@@ -64,6 +64,7 @@ async def main():
     # dropping tables
     await db.drop_table(User)
     await db.drop_table(Chat)
+    await db.drop_table(Role)
 
     await DB.close_connections()
 

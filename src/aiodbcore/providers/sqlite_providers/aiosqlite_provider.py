@@ -58,7 +58,6 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
 
     def _translate_exception(self, exception, query, params):
         if isinstance(exception, aiosqlite.IntegrityError):
-            print(exception.sqlite_errorname)
             if exception.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE":
                 text = exception.args[0]
                 return UniqueRequiredError(
