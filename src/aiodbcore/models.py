@@ -290,6 +290,8 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
     :param model: dataclass.
     :returns: signature of model.
     """
+    if hasattr(model, "__aiodbc__"):
+        return getattr(model, "__aiodbc__")
     if not dataclasses.is_dataclass(model):
         raise TypeError(f"Model `{model.__name__}` is not a dataclass")
     watch_changes(model)
@@ -345,6 +347,7 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
             f"`id` attribute of model `{model.__name__}` should contains `int`"
         )
 
+    setattr(model, "__aiodbc__", signature)
     return signature
 
 
