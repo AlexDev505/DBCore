@@ -76,7 +76,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> Model | None: ...
@@ -90,7 +89,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> tuple[Model, JoinModel] | None: ...
@@ -104,7 +102,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> tuple[Model, JoinModel | None] | None: ...
@@ -118,7 +115,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> tuple[Model | None, JoinModel] | None: ...
@@ -132,7 +128,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Model]: ...
@@ -146,7 +141,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[tuple[Model, JoinModel]]: ...
@@ -160,7 +154,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[tuple[Model, JoinModel | None]]: ...
@@ -174,7 +167,6 @@ class AsyncDBCore[Models]:
         order_by: (
             Field | InvertedField | tuple[Field | InvertedField, ...] | None
         ) = None,
-        reverse: bool = False,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[tuple[Model | None, JoinModel]]: ...
