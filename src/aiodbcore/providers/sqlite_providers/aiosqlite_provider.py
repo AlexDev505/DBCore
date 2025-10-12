@@ -38,12 +38,6 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, args)
 
-    async def _execute_insert_query(self, query, values):
-        async with self.ensure_connection() as connection:
-            cursor: aiosqlite.Cursor = await connection.execute(query, values)
-            rows = await cursor.fetchall()
-            return [row[0] for row in rows]
-
     async def _fetchone(self, query, args=()) -> tuple[ty.Any] | None:
         if rows := await self._fetchall(query, args):
             return rows[0]

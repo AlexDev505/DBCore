@@ -47,11 +47,6 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, *args)
 
-    async def _execute_insert_query(self, query, values) -> list[int]:
-        async with self.ensure_connection() as connection:
-            rows = await connection.fetch(query, *values)
-            return [row.get("id") for row in rows]
-
     async def _fetchone(self, query, args=()) -> tuple[ty.Any]:
         async with self.ensure_connection() as connection:
             return await connection.fetchrow(query, *args)

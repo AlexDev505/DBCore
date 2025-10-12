@@ -77,6 +77,7 @@ class BaseProvider[ConnType](ABC):
     )
     DROP_TABLE_QUERY_TEMPLATE: DropTableQuery = 'DROP TABLE "{table_name}"'
 
+    RETURNING_TEMPLATE = "RETURNING {fields}"
     CREATE_TABLE_FIELD_TEMPLATE = "{field_name} {type}{unique}"
     UNIQUE_FIELD = "UNIQUE"
     CREATE_INDEX_TEMPLATE = (
@@ -197,13 +198,7 @@ class BaseProvider[ConnType](ABC):
         :returns: ID of the inserted row.
         """
         args = tuple(self.adapt_value(arg) for arg in args)
-        return await self._execute_insert_query(query, args)
-
-    @abstractmethod
-    async def _execute_insert_query(
-        self, query: InsertQuery, values: ty.Sequence[ty.Any]
-    ) -> list[int]:
-        raise NotImplementedError()
+        return [row[0] for row in await self._fetchall(query, args)]
 
     def prepare_select_query(
         self,
