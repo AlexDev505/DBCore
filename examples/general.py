@@ -14,6 +14,18 @@ class DB(AsyncDBCore[User | Chat | Role]):
     async def get_old_peoples(self) -> list[User]:
         return await self.fetchall(User, where=User.age >= 20)
 
+    async def get_old_peoples_count(self) -> int:
+        """
+        Custom query to get count of rows
+        """
+        where = User.age >= 20
+        query = self.provider.prepare_select_query(
+            User.__name__, fields=("COUNT(*)",), where=str(where)
+        )
+        if row := await self.provider.fetchone(query, where.get_values()):
+            return row[0]
+        return 0
+
 
 async def main():
     DB.init(DB_PATH)
@@ -60,6 +72,9 @@ async def main():
     # deleting rows
     await db.delete(User, where=User.age > 20)
     print("after deletion:", *await db.fetchall(User), sep="\n")
+
+    # custom query
+    print("old peoples count:", await db.get_old_peoples_count())
 
     # dropping tables
     await db.drop_table(User)

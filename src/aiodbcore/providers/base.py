@@ -14,8 +14,7 @@ from inspect import isclass
 import orjson
 
 from ..exceptions import ConnectionIsNotAccrued, QueryError
-from ..models import UnionType
-from ..tools import Construct, convert_type, is_dt_type
+from ..tools import Construct, convert_type
 
 type Query = str
 type CreateTableQuery = Query
@@ -66,9 +65,7 @@ class BaseProvider[ConnType](ABC):
     INSERT_INTO_QUERY_TEMPLATE: InsertQuery = (
         'INSERT INTO "{table_name}" ({fields}) VALUES {rows}  RETURNING id'
     )
-    SELECT_QUERY_TEMPLATE: SelectQuery = (
-        'SELECT * FROM "{table_name}"{join}{where}{order_by}{limit}{offset}'
-    )
+    SELECT_QUERY_TEMPLATE: SelectQuery = 'SELECT {fields} FROM "{table_name}"{join}{where}{order_by}{limit}{offset}'
     UPDATE_QUERY_TEMPLATE: UpdateQuery = (
         'UPDATE "{table_name}" SET {fields}{where}'
     )
@@ -203,6 +200,7 @@ class BaseProvider[ConnType](ABC):
     def prepare_select_query(
         self,
         table_name: str,
+        fields: tuple[str, ...] | None = None,
         join: str | None = None,
         where: str | None = None,
         order_by: tuple[str | tuple[str, bool], ...] | None = None,
@@ -211,6 +209,7 @@ class BaseProvider[ConnType](ABC):
     ) -> SelectQuery:
         return self.SELECT_QUERY_TEMPLATE.format(
             table_name=table_name,
+            fields=", ".join(fields) if fields else "*",
             join=f" {join}" if join else "",
             where=(
                 f" WHERE {self._paste_placeholders(where)}"
@@ -265,6 +264,7 @@ class BaseProvider[ConnType](ABC):
         :returns: list of raw data from db.
         """
         args = tuple(self.adapt_value(arg) for arg in args)
+        print(query)
         return await self._fetchall(query, args)
 
     @abstractmethod

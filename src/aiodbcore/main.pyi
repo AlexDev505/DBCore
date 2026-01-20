@@ -32,6 +32,7 @@ class AsyncDBCore[Models]:
     def _prepare_select_query(
         self,
         model_name: str,
+        fields: tuple[Field | str, ...] | None = None,
         join: Join[Models] | None = None,
         where: Operator | None = None,
         order_by: (

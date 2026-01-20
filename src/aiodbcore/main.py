@@ -3,14 +3,15 @@ from __future__ import annotations
 import types as tys
 import typing as ty
 
-from .models import Field, ModelSignature, prepare_model
-from .operators import InvertedField, MathOperator
+from .models import Field, prepare_model
+from .operators import MathOperator
 from .providers import get_provider
 from .tools import get_changed_attributes
 
 if ty.TYPE_CHECKING:
     from .joins import Join
-    from .operators import Operator
+    from .models import ModelSignature
+    from .operators import InvertedField, Operator
     from .providers import BaseProvider
 
 
@@ -149,6 +150,7 @@ class AsyncDBCore[Models]:
     def _prepare_select_query(
         self,
         model_name: str,
+        fields: tuple[Field | str, ...] | None = None,
         join: Join[Models] | None = None,
         where: Operator | None = None,
         order_by: (
@@ -157,10 +159,16 @@ class AsyncDBCore[Models]:
         limit: int | None = None,
         offset: int = 0,
     ) -> str:
+        if not fields:
+            fields = (
+                *self.signatures[model_name].fields,
+                *(self.signatures[join.model.__name__].fields if join else ()),
+            )
         if order_by and not isinstance(order_by, tuple):
             order_by = (order_by,)
         return self.provider.prepare_select_query(
             model_name,
+            fields=tuple(str(x) for x in fields),
             join=str(join) if join else None,
             where=str(where) if where is not None else None,
             order_by=(
@@ -231,7 +239,7 @@ class AsyncDBCore[Models]:
         :returns: one model or None.
         """
         query = self._prepare_select_query(
-            model.__name__, join, where, order_by, limit, offset
+            model.__name__, None, join, where, order_by, limit, offset
         )
         if data := await self.provider.fetchone(
             query, where.get_values() if where is not None else ()
@@ -261,7 +269,7 @@ class AsyncDBCore[Models]:
         :returns: list of model or empty list.
         """
         query = self._prepare_select_query(
-            model.__name__, join, where, order_by, limit, offset
+            model.__name__, None, join, where, order_by, limit, offset
         )
         data = await self.provider.fetchall(
             query, where.get_values() if where is not None else ()
