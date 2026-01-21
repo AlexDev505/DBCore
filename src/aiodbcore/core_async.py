@@ -9,10 +9,13 @@ class AsyncDBCore[Models](BaseDBCore[BaseAsyncProvider, Models]):
     or use this class directly.
     """
 
+    _use_async = True
+
     @classmethod
     async def close_connections(cls) -> None:
         for provider in cls.dbs.values():
-            await provider.close_connection()
+            if isinstance(provider, BaseAsyncProvider):
+                await provider.close_connection()
 
     async def execute(self, query, args=()):
         return await self.provider.execute(query, args)

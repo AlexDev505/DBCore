@@ -64,7 +64,6 @@ class BaseSyncProvider[ConnType](BaseProvider[ConnType], ABC):
         self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
     ) -> list[tuple[ty.Any, ...]]:
         args = tuple(self.adapt_value(arg) for arg in args)
-        print(query)
         return self._fetchall(query, args)
 
 

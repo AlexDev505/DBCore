@@ -9,10 +9,13 @@ class SyncDBCore[Models](BaseDBCore[BaseSyncProvider, Models]):
     or use this class directly.
     """
 
+    _use_async = False
+
     @classmethod
     def close_connections(cls) -> None:
         for provider in cls.dbs.values():
-            provider.close_connection()
+            if isinstance(provider, BaseSyncProvider):
+                provider.close_connection()
 
     def execute(self, query, args=()):
         return self.provider.execute(query, args)

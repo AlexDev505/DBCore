@@ -1,3 +1,4 @@
+import re
 import threading
 import typing as ty
 
@@ -51,7 +52,7 @@ class Sqlite3Provider(BaseSyncProvider[sqlite3.Connection]):
 
     @staticmethod
     def modify_db_path(db_path: str) -> str:
-        return db_path.removeprefix("sqlite+sqlite3://")
+        return re.sub(r"sqlite(\+sqlite3)?://", "", db_path)
 
     def _translate_exception(self, exception, query, params):
         if isinstance(exception, sqlite3.IntegrityError):

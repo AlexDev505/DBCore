@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import types as tys
 import typing as ty
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from .models import Field, prepare_model
 from .operators import MathOperator
@@ -16,15 +16,17 @@ if ty.TYPE_CHECKING:
     from .providers import BaseProvider
 
 
-class BaseDBCore[ProviderT: BaseProvider, Models]:
+class BaseDBCore[ProviderT: BaseProvider, Models](ABC):
     """
     Main db class.
     You can implement your queries to the database in the child class
     or use this class directly.
     """
 
+    _use_async: bool
+
     signatures: dict[str, ModelSignature] = {}
-    dbs: dict[str, ProviderT] = {}  # {db_path: provider}
+    dbs: dict[str, ProviderT] = {}  # {db_name: provider}
     db_names: dict[str, str] = {}  # {db_name: db_path}
 
     @classmethod
@@ -42,7 +44,7 @@ class BaseDBCore[ProviderT: BaseProvider, Models]:
         cls.db_names[db_name] = database_path
 
         generics = get_base_generics(cls, BaseDBCore)
-        provider = get_provider(database_path)
+        provider = get_provider(database_path, use_async=cls._use_async)
         if not issubclass(provider, generics[ProviderT]):
             raise TypeError(
                 f"Provider {provider.__name__} is not a subclass "
@@ -64,14 +66,14 @@ class BaseDBCore[ProviderT: BaseProvider, Models]:
         )
 
         if database_path not in cls.dbs:
-            cls.dbs[database_path] = ty.cast(
+            cls.dbs[db_name] = ty.cast(
                 ProviderT, provider(database_path, **connection_kwargs)
             )
 
     def __init__(self, db: str = "main"):
         if not self.dbs:
             raise RuntimeError("DB is not initialized")
-        if not (provider := self.dbs.get(self.db_names.get(db, ""))):
+        if not (provider := self.dbs.get(db)):
             raise ValueError(f"DB `{db}` is not initialized")
         self.provider: ProviderT = provider
 

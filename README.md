@@ -4,6 +4,7 @@ ORM that does not require the developer to create models specifically for it.
 dbcore works with dataclasses and allows you to connect from one interface
 to both local databases (sqlite+aiosqlite) and remote databases (postgres+asyncpg).
 
+
 ### Small example
 
 ```python
@@ -40,7 +41,6 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
 ```
 
 The declaration of the model from the example above is certainly simple and elegant, but this method does not allow the IDE to show type hints, and static typers will complain. Therefore, there is another way to declare models, it will require minimal changes in the code.
@@ -71,3 +71,39 @@ class MyDB(SyncDBCore[MyModel]):  # the same model `MyModel` is used
 ```
 
 > Currently only `sqlite+sqlite3` is supported.
+
+
+### Context manager declaration
+
+Using the `Database` class allows you to select synchronous and asynchronous connections using the context manager.
+
+```python
+from aiodbcore import Database
+
+class MyDB(Database[MyModel]): ...
+
+MyDB.init("sqlite://db.sqlite")  # In this case, you cannot explicitly specify the library in the database path.
+
+def sync_environment():
+    with MyDB() as db:
+        data = db.fetchall(MyModel)
+        
+async def async_environment():
+    async with MyDB() as db:
+        data = await db.fetchall(MyModel)
+```
+
+
+### Installation
+
+You can install `aiodbcore` using pip:
+
+```bash
+pip install aiodbcore
+```
+
+for install all async providers (aiosqlite and asyncpg):
+
+```bash
+pip install aiodbcore[async]
+```

@@ -1,4 +1,5 @@
 import asyncio
+import re
 import typing as ty
 
 from ...exceptions import UniqueRequiredError
@@ -52,7 +53,7 @@ class AiosqliteProvider(BaseAsyncProvider[aiosqlite.Connection]):
 
     @staticmethod
     def modify_db_path(db_path: str) -> str:
-        return db_path.removeprefix("sqlite+aiosqlite://")
+        return re.sub(r"sqlite(\+aiosqlite)?://", "", db_path)
 
     def _translate_exception(self, exception, query, params):
         if isinstance(exception, aiosqlite.IntegrityError):
