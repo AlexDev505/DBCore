@@ -1,5 +1,6 @@
 import dataclasses
 import hashlib
+import types as tys
 import typing as ty
 from datetime import date, datetime, time
 
@@ -122,3 +123,50 @@ def convert_type[T](obj: ty.Any, python_type: Construct[T]) -> T:
             return python_type(**obj)
         return python_type(*obj)
     return python_type(obj)
+
+
+def get_base_generics(cls: type, base_class: type) -> dict[ty.TypeVar, ty.Any]:
+    """
+    Returns the generic types of base class.
+    Supports multiple and deep inheritance.
+    """
+    if not issubclass(cls, base_class):
+        raise ValueError(
+            f"{cls.__name__} is not a subclass of {base_class.__name__}"
+        )
+    t_vars = {}
+    while True:
+        parent_class = [x for x in cls.__bases__ if issubclass(x, base_class)]
+        if len(parent_class) > 1:
+            raise ValueError("Multiple inheritance not supported")
+        parent_class = parent_class[0]
+        parent_generic = next(
+            filter(
+                lambda x: ty.get_origin(x) is ty.Generic,
+                tys.get_original_bases(parent_class),
+            ),
+            None,
+        )
+        passes_generic = next(
+            filter(
+                lambda x: ty.get_origin(x) is parent_class,
+                tys.get_original_bases(cls),
+            ),
+            None,
+        )
+        if parent_generic and not passes_generic:
+            raise ValueError(
+                f"Generic type for class {parent_class.__name__} "
+                f"not passed in {cls.__name__} class"
+            )
+        passes_generic = ty.get_args(passes_generic)
+        parent_generic = ty.get_args(parent_generic)
+        t_vars = {
+            pg: t_vars.get(pt, pt)
+            for pg, pt in zip(parent_generic, passes_generic)
+        }
+        cls = parent_class
+        if cls is base_class:
+            break
+
+    return t_vars

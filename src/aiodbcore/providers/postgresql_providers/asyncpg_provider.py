@@ -2,8 +2,6 @@ import asyncio
 import re
 import typing as ty
 
-from ...exceptions import UniqueRequiredError
-
 try:
     import asyncpg
 except ModuleNotFoundError as err:
@@ -12,10 +10,11 @@ except ModuleNotFoundError as err:
         "Use `pip install asyncpg`"
     ) from err
 
-from ..base import BaseProvider, PoolConnectionWrapper
+from ...exceptions import UniqueRequiredError
+from ..base_async import AsyncPoolConnectionWrapper, BaseAsyncProvider
 
 
-class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
+class AsyncpgProvider(BaseAsyncProvider[asyncpg.Connection]):
     CREATE_TABLE_QUERY_TEMPLATE = (
         'CREATE TABLE IF NOT EXISTS "{table_name}" '
         "(id SERIAL PRIMARY KEY NOT NULL, {fields})"
@@ -40,18 +39,24 @@ class AsyncpgProvider(BaseProvider[asyncpg.Connection]):
     async def close_connection(self) -> None:
         await self.connections_pool.close()
 
-    def ensure_connection(self):
-        return PoolConnectionWrapper(self, self._pool_init_lock)
+    def ensure_connection(
+        self,
+    ) -> AsyncPoolConnectionWrapper[asyncpg.Connection]:
+        return AsyncPoolConnectionWrapper(self, self._pool_init_lock)
 
     async def _execute(self, query, args=()):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, *args)
 
-    async def _fetchone(self, query, args=()) -> tuple[ty.Any]:
+    async def executescript(self, query):
+        async with self.ensure_connection() as connection:
+            return await connection.execute(query)
+
+    async def _fetchone(self, query, args=()) -> tuple[ty.Any, ...] | None:
         async with self.ensure_connection() as connection:
             return await connection.fetchrow(query, *args)
 
-    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any]]:
+    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any, ...]]:
         async with self.ensure_connection() as connection:
             return await connection.fetch(query, *args)
 

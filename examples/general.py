@@ -18,11 +18,11 @@ class DB(AsyncDBCore[User | Chat | Role]):
         """
         Custom query to get count of rows
         """
-        where = User.age >= 20
-        query = self.provider.prepare_select_query(
-            User.__name__, fields=("COUNT(*)",), where=str(where)
-        )
-        if row := await self.provider.fetchone(query, where.get_values()):
+        if row := await self.provider.fetchone(
+            *self._prepare_select_query(
+                User.__name__, fields=("COUNT(*)",), where=User.age >= 20
+            )
+        ):
             return row[0]
         return 0
 

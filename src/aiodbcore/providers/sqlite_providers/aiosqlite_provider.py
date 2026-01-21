@@ -11,10 +11,10 @@ except ModuleNotFoundError as err:
         "Use `pip install aiosqlite`"
     ) from err
 
-from ..base import BaseProvider, ConnectionWrapper
+from ..base_async import AsyncConnectionWrapper, BaseAsyncProvider
 
 
-class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
+class AiosqliteProvider(BaseAsyncProvider[aiosqlite.Connection]):
     def __init__(self, db_path, **connection_kwargs) -> None:
         super().__init__(db_path, **connection_kwargs)
         self.connection = None
@@ -31,18 +31,22 @@ class AiosqliteProvider(BaseProvider[aiosqlite.Connection]):
             await self.connection.close()
             self.connection = None
 
-    def ensure_connection(self):
-        return ConnectionWrapper(self, self._lock)
+    def ensure_connection(self) -> AsyncConnectionWrapper[aiosqlite.Connection]:
+        return AsyncConnectionWrapper(self, self._lock)
 
     async def _execute(self, query, args=()):
         async with self.ensure_connection() as connection:
             return await connection.execute(query, args)
 
-    async def _fetchone(self, query, args=()) -> tuple[ty.Any] | None:
+    async def executescript(self, query):
+        async with self.ensure_connection() as connection:
+            return await connection.executescript(query)
+
+    async def _fetchone(self, query, args=()) -> tuple[ty.Any, ...] | None:
         if rows := await self._fetchall(query, args):
             return rows[0]
 
-    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any]]:
+    async def _fetchall(self, query, args=()) -> list[tuple[ty.Any, ...]]:
         async with self.ensure_connection() as connection:
             return list(await connection.execute_fetchall(query, args))
 

@@ -3,6 +3,8 @@ import re
 import typing as ty
 
 from .base import BaseProvider
+from .base_async import BaseAsyncProvider as BaseAsyncProvider
+from .base_sync import BaseSyncProvider as BaseSyncProvider
 
 
 def get_provider(db_url: str) -> ty.Type[BaseProvider]:

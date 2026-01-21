@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import string
 import typing as ty
@@ -13,7 +12,7 @@ from inspect import isclass
 
 import orjson
 
-from ..exceptions import ConnectionIsNotAccrued, QueryError
+from ..exceptions import QueryError
 from ..tools import Construct, convert_type
 
 type Query = str
@@ -27,9 +26,9 @@ type DropTableQuery = Query
 
 def translate_exceptions(func):
     @wraps(func)
-    async def _wrapper(self: BaseProvider, query, args=()):
+    def _wrapper(self: BaseProvider, query, args=()):
         try:
-            return await func(self, query, args)
+            return func(self, query, args)
         except Exception as e:
             raise self._translate_exception(e, query, args)
 
@@ -39,7 +38,7 @@ def translate_exceptions(func):
 class BaseProvider[ConnType](ABC):
     """
     Base class for SQL providers.
-    T : type of connection instance.
+    ConnType : type of connection instance.
     """
 
     TYPING_MAP = {"str": "TEXT", "int": "INTEGER", "float": "REAL"}
@@ -93,14 +92,14 @@ class BaseProvider[ConnType](ABC):
         self.connection_kwargs = connection_kwargs
 
     @abstractmethod
-    async def create_connection(self) -> None:
+    def create_connection(self):
         """
         Connects to db.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    async def close_connection(self) -> None:
+    def close_connection(self):
         """
         Closes db connection.
         """
@@ -109,25 +108,29 @@ class BaseProvider[ConnType](ABC):
     @abstractmethod
     def ensure_connection(
         self,
-    ) -> ConnectionWrapper[ConnType] | PoolConnectionWrapper[ConnType]:
+    ) -> BaseConnectionWrapper[ConnType] | BasePoolConnectionWrapper[ConnType]:
         """
         Acquires a connection from the pool.
         """
         raise NotImplementedError()
 
+    @abstractmethod
     @translate_exceptions
-    async def execute(self, query: Query, args: ty.Sequence[ty.Any] = ()):
+    def execute(self, query: Query, args: ty.Sequence[ty.Any] = ()):
         """
         Executes SQL query.
         :param query: SQL statement.
         :param args: statement params.
         :returns: cursor instance.
         """
-        args = tuple(self.adapt_value(arg) for arg in args)
-        return await self._execute(query, args)
+        raise NotImplementedError()
 
     @abstractmethod
-    async def _execute(self, query: Query, args: ty.Sequence[ty.Any] = ()):
+    def _execute(self, query: Query, args: ty.Sequence[ty.Any] = ()) -> ty.Any:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def executescript(self, query: Query) -> ty.Any:
         raise NotImplementedError()
 
     def prepare_create_table_query(
@@ -184,18 +187,18 @@ class BaseProvider[ConnType](ABC):
             ),
         )
 
+    @abstractmethod
     @translate_exceptions
-    async def execute_insert_query(
+    def execute_insert_query(
         self, query: InsertQuery, args: ty.Sequence[ty.Any]
-    ) -> list[int]:
+    ):
         """
         Executes SQL insert query.
         :param query: SQL statement.
         :param args: statement params.
         :returns: ID of the inserted row.
         """
-        args = tuple(self.adapt_value(arg) for arg in args)
-        return [row[0] for row in await self._fetchall(query, args)]
+        raise NotImplementedError()
 
     def prepare_select_query(
         self,
@@ -234,43 +237,33 @@ class BaseProvider[ConnType](ABC):
             offset=f" OFFSET {offset}" if offset else "",
         )
 
-    @translate_exceptions
-    async def fetchone(
-        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
-    ) -> tuple[ty.Any, ...] | None:
+    @abstractmethod
+    def fetchone(self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()):
         """
         Executes SQL select query and return one row.
         :param query: SQL statement.
         :param args: statement params.
         :returns: raw data from db.
         """
-        args = tuple(self.adapt_value(arg) for arg in args)
-        return await self._fetchone(query, args)
-
-    @abstractmethod
-    async def _fetchone(
-        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
-    ) -> tuple[ty.Any, ...] | None:
         raise NotImplementedError()
 
+    @abstractmethod
+    def _fetchone(self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()):
+        raise NotImplementedError()
+
+    @abstractmethod
     @translate_exceptions
-    async def fetchall(
-        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
-    ) -> list[tuple[ty.Any, ...]]:
+    def fetchall(self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()):
         """
         Executes SQL select query and return all rows.
         :param query: SQL statement.
         :param args: statement params.
         :returns: list of raw data from db.
         """
-        args = tuple(self.adapt_value(arg) for arg in args)
-        print(query)
-        return await self._fetchall(query, args)
+        raise NotImplementedError()
 
     @abstractmethod
-    async def _fetchall(
-        self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()
-    ) -> list[tuple[ty.Any, ...]]:
+    def _fetchall(self, query: SelectQuery, args: ty.Sequence[ty.Any] = ()):
         raise NotImplementedError()
 
     def prepare_update_query(
@@ -395,48 +388,11 @@ class BaseProvider[ConnType](ABC):
         return QueryError(query, params, exception)
 
 
-class ConnectionWrapper[ConnType]:
-    def __init__(self, provider: BaseProvider[ConnType], lock: asyncio.Lock):
-        self.provider = provider
-        self.connection: ConnType | None = None
-        self._lock = lock
-
-    async def ensure_connection(self) -> None:
-        if not self.connection:
-            await self.provider.create_connection()
-            self.connection = self.provider.connection
-
-    async def __aenter__(self) -> ConnType:
-        await self._lock.acquire()
-        await self.ensure_connection()
-        if self.connection is None:
-            raise ConnectionIsNotAccrued()
-        return self.connection
-
-    async def __aexit__(self, *_):
-        self._lock.release()
+class BaseConnectionWrapper[ConnType](ABC):
+    def __init__(self, provider: BaseProvider[ConnType], lock):
+        raise NotImplementedError()
 
 
-class PoolConnectionWrapper[ConnType]:
-    def __init__(
-        self, provider: BaseProvider[ConnType], pool_init_lock: asyncio.Lock
-    ):
-        self.provider = provider
-        self.connection: ConnType | None = None
-        self._pool_init_lock = pool_init_lock
-
-    async def ensure_connection(self) -> None:
-        if not self.provider.connections_pool:
-            async with self._pool_init_lock:
-                if not self.provider.connections_pool:
-                    await self.provider.create_connection()
-
-    async def __aenter__(self) -> ConnType:
-        await self.ensure_connection()
-        self.connection = await self.provider.connections_pool.acquire()
-        if self.connection is None:
-            raise ConnectionIsNotAccrued()
-        return self.connection
-
-    async def __aexit__(self, *_):
-        await self.provider.connections_pool.release(self.connection)
+class BasePoolConnectionWrapper[ConnType](ABC):
+    def __init__(self, provider: BaseProvider[ConnType], pool_init_lock):
+        raise NotImplementedError()

@@ -58,3 +58,16 @@ class MyModel:
     foo: Field[int] = 0
     bar: Filed[str] = ""
 ```
+
+### Sync version
+
+`SyncDBCore` has the same interface as the async version.
+You just need to remove all the `async` and `await` statements.
+
+```python
+class MyDB(SyncDBCore[MyModel]):  # the same model `MyModel` is used
+    def my_simple_query(self) -> list[MyModel]:
+        return self.fetchall(MyModel, where=MyModel.foo > 10)
+```
+
+> Currently only `sqlite+sqlite3` is supported.
