@@ -338,9 +338,11 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
         signature.fields.append(field)
         setattr(model, field_name, field)
         getattr(model, field_name)
-    if (id_field := signature.fields[0]).name != "id":
+    if not (
+        id_field := next(filter(lambda x: x.name == "id", signature.fields))
+    ):
         raise AttributeError(
-            f"The first attribute of the model `{model.__name__}` should be `id`"
+            f"The model `{model.__name__}` should have an `id` attribute"
         )
     if not id_field.compare_type(int):
         raise TypeError(
