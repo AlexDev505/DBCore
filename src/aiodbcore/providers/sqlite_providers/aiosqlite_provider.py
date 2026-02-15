@@ -24,7 +24,7 @@ class AiosqliteProvider(BaseAsyncProvider[aiosqlite.Connection]):
     async def create_connection(self) -> None:
         if not self.connection:
             self.connection = await aiosqlite.connect(
-                self.db_path, isolation_level=None
+                self.db_path, isolation_level=None, **self.connection_kwargs
             )
 
     async def close_connection(self) -> None:

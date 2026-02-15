@@ -33,7 +33,7 @@ class AsyncpgProvider(BaseAsyncProvider[asyncpg.Connection]):
 
     async def create_connection(self) -> None:
         self.connections_pool = await asyncpg.create_pool(
-            self.db_path, min_size=1, max_size=5
+            self.db_path, min_size=1, max_size=5, **self.connection_kwargs
         )
 
     async def close_connection(self) -> None:

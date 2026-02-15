@@ -23,7 +23,7 @@ class Sqlite3Provider(BaseSyncProvider[sqlite3.Connection]):
     def create_connection(self) -> None:
         if not self.connection:
             self.connection = sqlite3.connect(
-                self.db_path, isolation_level=None
+                self.db_path, isolation_level=None, **self.connection_kwargs
             )
 
     def close_connection(self) -> None:
