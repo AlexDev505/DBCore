@@ -315,12 +315,8 @@ def prepare_model(model: ty.Type[ty.Any]) -> ModelSignature:
                 index = Index(f"{field_name}_idx")
             field_type = ty.get_args(field_type)[0]
         if ty.get_origin(field_type) is Field:
-            field = getattr(model, field_name, None)
-            if not isinstance(field, Field):
-                field = Field(getattr(model, field_name, None))
             field_type = ty.get_args(field_type)[0]
-        else:
-            field = Field(getattr(model, field_name, None))
+        field = Field(getattr(model, field_name, None))
         lt_gt = field_type in LT_GT_SUPPORTED
         if ty.get_origin(field_type) in {ty.Union, tys.UnionType}:
             field_type = UnionType(*ty.get_args(field_type))
